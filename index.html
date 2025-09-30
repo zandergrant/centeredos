@@ -40,6 +40,11 @@
             <div class="tile full-width" id="reflection-tile">
                 <div class="tile-header">
                     <h3>Daily Reflection</h3>
+                    <div class="date-nav">
+                        <button id="prev-day-btn">&lt;</button>
+                        <span id="reflection-date-display"></span>
+                        <button id="next-day-btn">&gt;</button>
+                    </div>
                 </div>
                 <div class="tile-content">
                     <p id="ai-prompt-display">Loading your daily prompt...</p>
@@ -47,20 +52,6 @@
                 </div>
                 <div class="tile-footer">
                     <button id="submit-reflection-btn">Save Reflection</button>
-                </div>
-            </div>
-
-            <!-- Tile 3: AI Settings -->
-            <div class="tile full-width">
-                <div class="tile-header">
-                    <h3>AI Prompt Settings</h3>
-                </div>
-                <div class="tile-content">
-                    <p class="settings-description">Use this space to guide the AI. Tell it what kind of prompts you want. (e.g., "Focus on my work-life balance," or "Make the prompts sound like a stoic philosopher.")</p>
-                    <textarea id="custom-prompt-input" placeholder="Enter your custom instructions here..."></textarea>
-                </div>
-                <div class="tile-footer">
-                    <button id="save-settings-btn">Save Settings</button>
                 </div>
             </div>
         </div>
@@ -81,7 +72,7 @@
 
         let currentUserId = null;
         let centerednessChart = null;
-        let userCustomPrompt = ''; // Variable to hold the user's custom instructions
+        let reflectionDate = new Date(); // State for reflection navigation
 
         // --- Get all HTML elements ---
         const authContainer = document.getElementById('auth-container');
@@ -94,11 +85,12 @@
         const aiPromptDisplay = document.getElementById('ai-prompt-display');
         const reflectionEntry = document.getElementById('reflection-entry');
         const submitReflectionBtn = document.getElementById('submit-reflection-btn');
-        const customPromptInput = document.getElementById('custom-prompt-input');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const prevDayBtn = document.getElementById('prev-day-btn');
+        const nextDayBtn = document.getElementById('next-day-btn');
+        const reflectionDateDisplay = document.getElementById('reflection-date-display');
 
         // --- Date Formatting ---
-        function getFormattedDate(date = new Date()) {
+        function getFormattedDate(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
@@ -109,21 +101,13 @@
         // --- Chart Logic ---
         function createOrUpdateChart(chartData) {
             const ctx = document.getElementById('centeredness-chart').getContext('2d');
-            const labels = chartData.map(d => new Date(d.dateStr).toLocaleDateString('en-us', {month:'short', day:'numeric'}));
+            const labels = chartData.map(d => new Date(d.dateStr + 'T00:00:00').toLocaleDateString('en-us', {month:'short', day:'numeric'}));
             const steadinessData = chartData.map(d => d.steadiness);
             const presenceData = chartData.map(d => d.presence);
             const connectionData = chartData.map(d => d.connection);
             if (centerednessChart) centerednessChart.destroy();
             centerednessChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels,
-                    datasets: [
-                        { label: 'Steadiness', data: steadinessData, borderColor: 'rgb(75, 192, 192)', tension: 0.1 },
-                        { label: 'Presence', data: presenceData, borderColor: 'rgb(255, 159, 64)', tension: 0.1 },
-                        { label: 'Connection', data: connectionData, borderColor: 'rgb(153, 102, 255)', tension: 0.1 }
-                    ]
-                },
+                type: 'line', data: { labels, datasets: [ { label: 'Steadiness', data: steadinessData, borderColor: 'rgb(75, 192, 192)', tension: 0.1 }, { label: 'Presence', data: presenceData, borderColor: 'rgb(255, 159, 64)', tension: 0.1 }, { label: 'Connection', data: connectionData, borderColor: 'rgb(153, 102, 255)', tension: 0.1 } ] },
                 options: { scales: { y: { beginAtZero: true, max: 10 } } }
             });
         }
@@ -132,8 +116,7 @@
         async function loadDashboardData() {
             if (!currentUserId) return;
             loadPulseData();
-            loadReflectionData();
-            loadUserSettings(); // New function call
+            loadReflectionData(reflectionDate);
         }
 
         async function loadPulseData() {
@@ -144,7 +127,7 @@
                 if (docSnap.exists() && docSnap.data().status === 'completed') chartData.push({ dateStr, ...docSnap.data() });
             }
             createOrUpdateChart(chartData);
-            const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate()}`));
+            const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
             const isSnoozed = localStorage.getItem('snoozeUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozeUntil'), 10);
             if (todayDocSnap.exists()) {
                 pulseActionBtn.textContent = "Today's Pulse Submitted"; pulseActionBtn.disabled = true;
@@ -154,46 +137,39 @@
             }
         }
 
-        async function loadReflectionData() {
-            const docSnap = await getDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate()}`));
+        async function loadReflectionData(date) {
+            const dateStr = getFormattedDate(date);
+            reflectionDateDisplay.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            nextDayBtn.disabled = getFormattedDate(date) === getFormattedDate(new Date());
+
+            const docSnap = await getDoc(doc(db, "reflections", `${currentUserId}_${dateStr}`));
             if (docSnap.exists()) {
                 aiPromptDisplay.textContent = docSnap.data().promptText;
                 reflectionEntry.value = docSnap.data().entryText || '';
+                reflectionEntry.disabled = false;
+                submitReflectionBtn.disabled = false;
             } else {
-                generateAIPrompt();
+                reflectionEntry.value = '';
+                reflectionEntry.disabled = true;
+                submitReflectionBtn.disabled = true;
+                if (dateStr === getFormattedDate(new Date())) {
+                    generateAIPrompt(date);
+                } else {
+                    aiPromptDisplay.textContent = "No reflection recorded for this day.";
+                }
             }
         }
-        
-        // --- User Settings ---
-        async function loadUserSettings() {
-            const docSnap = await getDoc(doc(db, "userSettings", currentUserId));
-            if (docSnap.exists()) {
-                userCustomPrompt = docSnap.data().customAIPrompt || '';
-                customPromptInput.value = userCustomPrompt;
-            }
-        }
-
-        saveSettingsBtn.addEventListener('click', async () => {
-            if (!currentUserId) return;
-            userCustomPrompt = customPromptInput.value;
-            await setDoc(doc(db, "userSettings", currentUserId), { customAIPrompt: userCustomPrompt });
-            alert("Settings saved! Your new prompt style will be used for tomorrow's reflection.");
-        });
 
         // --- AI Prompt Generation ---
-        async function generateAIPrompt() {
+        async function generateAIPrompt(date) {
             aiPromptDisplay.textContent = "Thinking of a good prompt for you...";
             const q = query(collection(db, "reflections"), where("userId", "==", currentUserId), orderBy("submittedAt", "desc"), limit(5));
             const querySnapshot = await getDocs(q);
             let pastReflections = [];
             querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
-
-            // This is the "Inception" part! We combine our base prompt with the user's custom instructions.
-            const baseSystemPrompt = "You are a thoughtful journal assistant. Your goal is to provide a concise (under 180 characters) and insightful CBT-based prompt to encourage self-reflection. If the user has past reflections, base your prompt on their recent themes. If they have no past entries, provide a general but gentle CBT prompt about thoughts, feelings, or behaviors.";
-            let finalSystemPrompt = baseSystemPrompt;
-            if (userCustomPrompt) {
-                finalSystemPrompt += `\n\nAdditionally, follow these special instructions from the user: "${userCustomPrompt}"`;
-            }
+            
+            // This is the developer-controlled "meta-prompt"
+            const systemPrompt = "You are a thoughtful journal assistant. Your goal is to provide a concise (under 180 characters) and insightful CBT-based prompt to encourage self-reflection. If the user has past reflections, base your prompt on their recent themes. If they have no past entries, provide a general but gentle CBT prompt about thoughts, feelings, or behaviors.";
             
             let userQuery = "Please generate a new journal prompt for me.";
             if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
@@ -201,16 +177,20 @@
             try {
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: finalSystemPrompt }] } };
+                const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const result = await response.json();
                 const newPrompt = result.candidates[0].content.parts[0].text;
 
                 aiPromptDisplay.textContent = newPrompt;
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate()}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date().toISOString() });
+                reflectionEntry.disabled = false;
+                submitReflectionBtn.disabled = false;
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() });
             } catch (error) {
                 console.error("AI Prompt generation failed:", error);
                 aiPromptDisplay.textContent = "What is one thought you've had today that you'd like to look at more closely?";
+                reflectionEntry.disabled = false;
+                submitReflectionBtn.disabled = false;
             }
         }
         
@@ -229,13 +209,32 @@
         document.getElementById('signup-form').addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, e.target['signup-email'].value, e.target['signup-password'].value).catch(error => alert(error.message)); });
         document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message)); });
         signoutBtn.addEventListener('click', () => signOut(auth));
+        
         function showModal() { modal.classList.remove('hidden'); }
         function hideModal() { modal.classList.add('hidden'); }
         pulseActionBtn.addEventListener('click', showModal);
-        document.getElementById('pulse-form').addEventListener('submit', async (event) => { event.preventDefault(); if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate()}`; await setDoc(doc(db, "pulseCheckins", docId), { steadiness: parseInt(event.target.steadiness.value, 10), presence: parseInt(event.target.presence.value, 10), connection: parseInt(event.target.connection.value, 10), status: 'completed', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
+        
+        document.getElementById('pulse-form').addEventListener('submit', async (event) => { event.preventDefault(); if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { steadiness: parseInt(event.target.steadiness.value, 10), presence: parseInt(event.target.presence.value, 10), connection: parseInt(event.target.connection.value, 10), status: 'completed', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
         document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozeUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(); });
-        document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate()}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
-        submitReflectionBtn.addEventListener('click', async () => { if (!currentUserId) return; await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate()}`), { entryText: reflectionEntry.value, updatedAt: new Date().toISOString() }, { merge: true }); alert("Reflection saved!"); });
+        document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
+        
+        // Reflection Navigation Listeners
+        prevDayBtn.addEventListener('click', () => {
+            reflectionDate.setDate(reflectionDate.getDate() - 1);
+            loadReflectionData(reflectionDate);
+        });
+        nextDayBtn.addEventListener('click', () => {
+            reflectionDate.setDate(reflectionDate.getDate() + 1);
+            loadReflectionData(reflectionDate);
+        });
+
+        submitReflectionBtn.addEventListener('click', async () => {
+            if (!currentUserId) return;
+            const docId = `${currentUserId}_${getFormattedDate(reflectionDate)}`;
+            await setDoc(doc(db, "reflections", docId), { entryText: reflectionEntry.value, updatedAt: new Date().toISOString() }, { merge: true });
+            // No alert needed, just save quietly
+        });
+        
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
     </script>
 </body>
