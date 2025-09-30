@@ -1,8 +1,8 @@
 /* Basic Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f0f2f5; /* Lighter grey for background */
-    color: #1c1e21; /* Darker text */
+    background-color: #f0f2f5;
+    color: #1c1e21;
     margin: 0;
     padding: 20px;
 }
@@ -51,7 +51,7 @@ button:disabled {
 }
 
 button.btn-primary {
-    background-color: #1877f2; /* A modern blue */
+    background-color: #1877f2;
     color: white;
 }
 
@@ -87,74 +87,50 @@ button.btn-primary {
     padding-bottom: 15px;
 }
 
-.tile-header h3 {
-    margin: 0;
-}
+.tile-header h3 { margin: 0; }
+.tile-content { width: 100%; }
 
-.tile-content.pulse-scores {
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-}
-
-.score-item h4 {
-    margin: 0 0 5px 0;
-    font-weight: normal;
+/* Reflection Tile Specifics */
+#ai-prompt-display {
+    font-style: italic;
     color: #606770;
+    margin-bottom: 15px;
+    min-height: 20px; /* Prevents layout shift while loading */
 }
 
-.score-item p {
-    margin: 0;
-    font-size: 2.5em;
-    font-weight: 300;
+#reflection-entry {
+    width: calc(100% - 20px);
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    resize: vertical;
 }
 
 .tile-footer {
-    margin-top: 25px;
-    text-align: center;
+    margin-top: 20px;
+    text-align: right; /* Changed alignment */
 }
 
 /* Modal Styles */
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
-    opacity: 1;
-    transition: opacity 0.3s ease;
     z-index: 1000;
 }
-
 .modal-content {
     background-color: #fff;
     padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     width: 90%;
     max-width: 500px;
 }
-
-.slider-group {
-    margin-bottom: 20px;
-}
-
-.slider-group label {
-    display: block;
-    margin-bottom: 10px;
-}
-
-.slider-group input[type="range"] {
-    width: 100%;
-}
-
-.button-group {
-    margin-top: 30px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
+.slider-group { margin-bottom: 20px; }
+.slider-group label { display: block; margin-bottom: 10px; }
+.slider-group input[type="range"] { width: 100%; }
+.button-group { margin-top: 30px; display: flex; justify-content: space-between; gap: 10px; }
