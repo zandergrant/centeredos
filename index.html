@@ -9,21 +9,21 @@
 <body>
     <header>
         <h1>Welcome</h1>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <p style="font-size: 0.8em; color: #555; margin: 0;">Status: <span id="auth-status">Connecting...</span></p>
-            <button id="signout-btn" class="hidden" style="padding: 5px 10px;">Sign Out</button>
+        <div class="header-controls">
+            <p>Status: <span id="auth-status">Connecting...</span></p>
+            <button id="signout-btn" class="hidden">Sign Out</button>
         </div>
     </header>
 
     <!-- Login/Signup Forms -->
-    <div id="auth-container" style="margin-top: 20px;">
+    <div id="auth-container">
         <form id="login-form">
             <h3>Login</h3>
             <input type="email" id="login-email" placeholder="Email" required><br><br>
             <input type="password" id="login-password" placeholder="Password" required><br><br>
             <button type="submit">Login</button>
         </form>
-        <form id="signup-form" class="hidden" style="margin-top: 20px;">
+        <form id="signup-form" class="hidden">
             <h3>Sign Up</h3>
             <input type="email" id="signup-email" placeholder="Email" required><br><br>
             <input type="password" id="signup-password" placeholder="Password" required><br><br>
@@ -35,9 +35,31 @@
     <!-- Main App Content (Dashboard) -->
     <main id="app-content" class="hidden">
         <div id="dashboard">
-            <h2>Dashboard</h2>
-            <p>Your daily reflection and habit tracking will appear here.</p>
-            <button id="open-pulse-btn">Do Today's Pulse Check</button>
+            <!-- Tile 1: Daily Pulse -->
+            <div class="tile full-width" id="pulse-tile">
+                <div class="tile-header">
+                    <h3>Daily Pulse</h3>
+                    <span id="pulse-date"></span>
+                </div>
+                <div class="tile-content pulse-scores">
+                    <div class="score-item">
+                        <h4>Steadiness</h4>
+                        <p id="steadiness-display">-</p>
+                    </div>
+                    <div class="score-item">
+                        <h4>Presence</h4>
+                        <p id="presence-display">-</p>
+                    </div>
+                    <div class="score-item">
+                        <h4>Connection</h4>
+                        <p id="connection-display">-</p>
+                    </div>
+                </div>
+                <div class="tile-footer">
+                    <button id="pulse-action-btn" class="btn-primary">Do Today's Pulse Check</button>
+                </div>
+            </div>
+            <!-- More tiles will go here later -->
         </div>
     </main>
     
@@ -104,60 +126,78 @@
         const appContent = document.getElementById('app-content');
         const signoutBtn = document.getElementById('signout-btn');
         const modal = document.getElementById('pulse-modal');
-        const openBtn = document.getElementById('open-pulse-btn');
         const pulseForm = document.getElementById('pulse-form');
         const skipNowBtn = document.getElementById('skip-now-btn');
         const skipTodayBtn = document.getElementById('skip-today-btn');
+        const pulseActionBtn = document.getElementById('pulse-action-btn');
+        const steadinessDisplay = document.getElementById('steadiness-display');
+        const presenceDisplay = document.getElementById('presence-display');
+        const connectionDisplay = document.getElementById('connection-display');
+        const pulseDateEl = document.getElementById('pulse-date');
 
-        // --- Get YYYY-MM-DD date string ---
-        function getFormattedDate() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
+
+        // --- Date Formatting ---
+        function getFormattedDate(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         }
+        pulseDateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-        // --- Function to check if pulse is needed and show modal ---
-        async function checkAndShowPulseModal() {
+        // --- UI Update Functions ---
+        function updateDashboardUI(pulseData) {
+            if (pulseData && pulseData.status === 'completed') {
+                steadinessDisplay.textContent = pulseData.steadiness;
+                presenceDisplay.textContent = pulseData.presence;
+                connectionDisplay.textContent = pulseData.connection;
+                pulseActionBtn.textContent = "Today's Pulse Submitted";
+                pulseActionBtn.disabled = true;
+            } else {
+                steadinessDisplay.textContent = '-';
+                presenceDisplay.textContent = '-';
+                connectionDisplay.textContent = '-';
+                pulseActionBtn.textContent = "Do Today's Pulse Check";
+                pulseActionBtn.disabled = false;
+            }
+        }
+
+        // --- Main Data Loading Function ---
+        async function loadDailyData() {
             if (!currentUserId) return;
 
-            // Check 1: Is the user snoozing?
+            // Check snooze status first
             const snoozeUntil = localStorage.getItem('snoozeUntil');
-            if (snoozeUntil && new Date().getTime() < parseInt(snoozeUntil, 10)) {
-                console.log("Pulse check is snoozed.");
-                return;
-            }
+            const isSnoozed = snoozeUntil && new Date().getTime() < parseInt(snoozeUntil, 10);
 
-            // Check 2: Has the user already completed or skipped today in Firestore?
             try {
                 const todayDocId = `${currentUserId}_${getFormattedDate()}`;
                 const docRef = doc(db, "pulseCheckins", todayDocId);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
-                    console.log("Pulse check already handled for today.");
+                    updateDashboardUI(docSnap.data());
                 } else {
-                    console.log("Showing pulse check modal automatically.");
-                    showModal();
+                    updateDashboardUI(null); // Reset dashboard UI
+                    if (!isSnoozed) {
+                        showModal(); // Only show modal if not snoozed and no data exists
+                    }
                 }
             } catch (error) {
-                console.error("Error checking for pulse document:", error);
+                console.error("Error loading daily data:", error);
             }
         }
 
         // --- Handle User Authentication State ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in.
                 currentUserId = user.uid;
                 authStatus.textContent = `Connected (${user.email})`;
                 authContainer.classList.add('hidden');
                 appContent.classList.remove('hidden');
                 signoutBtn.classList.remove('hidden');
-                checkAndShowPulseModal(); // This is the new part!
+                loadDailyData();
             } else {
-                // User is signed out.
                 currentUserId = null;
                 authStatus.textContent = 'Not connected';
                 authContainer.classList.remove('hidden');
@@ -166,7 +206,7 @@
             }
         });
         
-        // --- Form Toggle Logic ---
+        // --- Auth Form Logic ---
         toggleFormLink.addEventListener('click', (e) => {
             e.preventDefault();
             signupForm.classList.toggle('hidden');
@@ -176,19 +216,14 @@
                 : 'Already have an account? Login';
         });
 
-        // --- Auth Form Handlers ---
         signupForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            createUserWithEmailAndPassword(auth, email, password)
+            createUserWithEmailAndPassword(auth, signupForm['signup-email'].value, signupForm['signup-password'].value)
                 .catch(error => alert(error.message));
         });
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            signInWithEmailAndPassword(auth, email, password)
+            signInWithEmailAndPassword(auth, loginForm['login-email'].value, loginForm['login-password'].value)
                 .catch(error => alert(error.message));
         });
         signoutBtn.addEventListener('click', () => signOut(auth));
@@ -197,7 +232,7 @@
         function showModal() { modal.classList.remove('hidden'); }
         function hideModal() { modal.classList.add('hidden'); }
         
-        openBtn.addEventListener('click', showModal);
+        pulseActionBtn.addEventListener('click', showModal);
 
         // --- Pulse Form Handlers ---
         pulseForm.addEventListener('submit', async (event) => {
@@ -212,6 +247,7 @@
                 submittedAt: new Date().toISOString()
             };
             await setDoc(doc(db, "pulseCheckins", docId), pulseData);
+            updateDashboardUI(pulseData); // Update UI immediately
             hideModal();
         });
 
@@ -224,10 +260,12 @@
         skipTodayBtn.addEventListener('click', async () => {
             if (!currentUserId) return;
             const docId = `${currentUserId}_${getFormattedDate()}`;
-            await setDoc(doc(db, "pulseCheckins", docId), {
+            const skippedData = {
                 status: 'skipped',
                 submittedAt: new Date().toISOString()
-            });
+            };
+            await setDoc(doc(db, "pulseCheckins", docId), skippedData);
+            updateDashboardUI(skippedData); // Update UI immediately
             hideModal();
         });
 
@@ -235,6 +273,7 @@
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => {
             const valueSpan = slider.nextElementSibling;
             slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; });
+            valueSpan.textContent = slider.value; // Set initial value on load
         });
     </script>
 </body>
