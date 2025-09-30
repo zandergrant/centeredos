@@ -5,18 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centered - Your Daily Pulse</title>
     <link rel="stylesheet" href="style.css">
-    <script src="script.js" defer></script>
+    <!-- We no longer need to link to script.js here -->
 </head>
 <body>
     <header>
         <h1>Welcome Back</h1>
         <p>Your centeredness journey continues.</p>
+        <p style="font-size: 0.8em; color: #555;">Status: <span id="auth-status">Connecting...</span></p>
     </header>
 
     <main>
+        <!-- For testing, we'll add a button to open the modal -->
         <button id="open-pulse-btn">Open Daily Pulse</button>
-        </main>
+        <!-- The rest of your app content will go here later -->
+    </main>
     
+    <!-- Daily Pulse Check-in Modal -->
     <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <h2 id="modal-title">Daily Pulse Check-in</h2>
@@ -45,5 +49,139 @@
         </div>
     </div>
 
+    <!-- All JavaScript is now inside this single module script -->
+    <script type="module">
+        // Import the functions you need from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration that you provided
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk",
+            authDomain: "centeredos.firebaseapp.com",
+            projectId: "centeredos",
+            storageBucket: "centeredos.firebasestorage.app",
+            messagingSenderId: "129785779353",
+            appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408",
+            measurementId: "G-7S84S0NHQV"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUserId = null;
+
+        // --- Handle User Authentication ---
+        const authStatus = document.getElementById('auth-status');
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in.
+                currentUserId = user.uid;
+                authStatus.textContent = `Connected (User ID: ${currentUserId})`;
+                console.log("User is signed in with UID:", currentUserId);
+            } else {
+                // User is signed out. Sign them in anonymously.
+                authStatus.textContent = 'Signing in...';
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Anonymous sign-in failed:", error);
+                    authStatus.textContent = 'Connection failed.';
+                });
+            }
+        });
+
+        // --- Get all the HTML elements we need ---
+        const modal = document.getElementById('pulse-modal');
+        const openBtn = document.getElementById('open-pulse-btn');
+        const pulseForm = document.getElementById('pulse-form');
+        const skipNowBtn = document.getElementById('skip-now-btn');
+        const skipTodayBtn = document.getElementById('skip-today-btn');
+
+        function showModal() { modal.classList.remove('hidden'); }
+        function hideModal() { modal.classList.add('hidden'); }
+        
+        openBtn.addEventListener('click', showModal);
+
+        // --- Get YYYY-MM-DD date string ---
+        function getFormattedDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // --- Event listener for the "Submit" button ---
+        pulseForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (!currentUserId) {
+                console.error("No user signed in. Cannot submit.");
+                return;
+            }
+
+            const formData = new FormData(pulseForm);
+            const pulseData = {
+                steadiness: parseInt(formData.get('steadiness'), 10),
+                presence: parseInt(formData.get('presence'), 10),
+                connection: parseInt(formData.get('connection'), 10),
+                status: 'completed',
+                submittedAt: new Date().toISOString()
+            };
+
+            const docId = `${currentUserId}_${getFormattedDate()}`;
+            console.log(`Submitting data to Firestore with doc ID: ${docId}`);
+
+            try {
+                // This writes the data to Firestore!
+                await setDoc(doc(db, "pulseCheckins", docId), pulseData);
+                console.log("Document successfully written!");
+                hideModal();
+            } catch (error) {
+                console.error("Error writing document: ", error);
+            }
+        });
+
+        // --- Event listener for the "Skip for now" button ---
+        skipNowBtn.addEventListener('click', () => {
+            console.log('Snoozing for 10 minutes.');
+            const tenMinutesFromNow = new Date().getTime() + (10 * 60 * 1000);
+            localStorage.setItem('snoozeUntil', tenMinutesFromNow);
+            hideModal();
+        });
+
+        // --- Event listener for the "Skip for today" button ---
+        skipTodayBtn.addEventListener('click', async () => {
+            if (!currentUserId) {
+                console.error("No user signed in. Cannot skip.");
+                return;
+            }
+            const docId = `${currentUserId}_${getFormattedDate()}`;
+            console.log(`Skipping for today. Writing to doc ID: ${docId}`);
+
+            try {
+                // This writes the "skipped" status to Firestore!
+                await setDoc(doc(db, "pulseCheckins", docId), {
+                    status: 'skipped',
+                    submittedAt: new Date().toISOString()
+                });
+                console.log("Document successfully marked as skipped!");
+                hideModal();
+            } catch (error) {
+                console.error("Error writing skipped document: ", error);
+            }
+        });
+
+        // --- Logic to update the number display next to each slider ---
+        const sliders = document.querySelectorAll('.slider-group input[type="range"]');
+        sliders.forEach(slider => {
+            const valueSpan = slider.nextElementSibling;
+            slider.addEventListener('input', (e) => {
+                valueSpan.textContent = e.target.value;
+            });
+        });
+
+    </script>
 </body>
 </html>
