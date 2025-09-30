@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centered - Your Daily Pulse</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Welcome Back</h1>
+        <p>Your centeredness journey continues.</p>
+    </header>
+
+    <main>
+        <button id="open-pulse-btn">Open Daily Pulse</button>
+        </main>
+    
+    <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <h2 id="modal-title">Daily Pulse Check-in</h2>
+            <form id="pulse-form">
+                <div class="slider-group">
+                    <label for="steadiness">How steady do you feel right now?</label>
+                    <input type="range" id="steadiness" name="steadiness" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="slider-group">
+                    <label for="presence">How present were you today?</label>
+                    <input type="range" id="presence" name="presence" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="slider-group">
+                    <label for="connection">How connected vs. reactive did you feel?</label>
+                    <input type="range" id="connection" name="connection" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Submit</button>
+                    <button type="button" id="skip-now-btn">Skip for now</button>
+                    <button type="button" id="skip-today-btn">Skip for today</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
