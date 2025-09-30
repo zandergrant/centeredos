@@ -5,22 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centered - Your Daily Pulse</title>
     <link rel="stylesheet" href="style.css">
-    <!-- We no longer need to link to script.js here -->
 </head>
 <body>
     <header>
-        <h1>Welcome Back</h1>
+        <h1>Welcome</h1>
         <p>Your centeredness journey continues.</p>
-        <p style="font-size: 0.8em; color: #555;">Status: <span id="auth-status">Connecting...</span></p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <p style="font-size: 0.8em; color: #555; margin: 0;">Status: <span id="auth-status">Connecting...</span></p>
+            <button id="signout-btn" class="hidden" style="padding: 5px 10px;">Sign Out</button>
+        </div>
     </header>
 
-    <main>
-        <!-- For testing, we'll add a button to open the modal -->
+    <div id="auth-container" style="margin-top: 20px;">
+        <form id="login-form">
+            <h3>Login</h3>
+            <input type="email" id="login-email" placeholder="Email" required><br><br>
+            <input type="password" id="login-password" placeholder="Password" required><br><br>
+            <button type="submit">Login</button>
+        </form>
+        <form id="signup-form" class="hidden" style="margin-top: 20px;">
+            <h3>Sign Up</h3>
+            <input type="email" id="signup-email" placeholder="Email" required><br><br>
+            <input type="password" id="signup-password" placeholder="Password" required><br><br>
+            <button type="submit">Sign Up</button>
+        </form>
+        <p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
+    </div>
+
+    <main id="app-content" class="hidden">
         <button id="open-pulse-btn">Open Daily Pulse</button>
-        <!-- The rest of your app content will go here later -->
-    </main>
+        </main>
     
-    <!-- Daily Pulse Check-in Modal -->
     <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <h2 id="modal-title">Daily Pulse Check-in</h2>
@@ -49,14 +64,13 @@
         </div>
     </div>
 
-    <!-- All JavaScript is now inside this single module script -->
     <script type="module">
         // Import the functions you need from the Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration that you provided
+        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk",
             authDomain: "centeredos.firebaseapp.com",
@@ -74,25 +88,75 @@
 
         let currentUserId = null;
 
-        // --- Handle User Authentication ---
+        // --- Get all the HTML elements we need ---
         const authStatus = document.getElementById('auth-status');
+        const authContainer = document.getElementById('auth-container');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const toggleFormLink = document.getElementById('toggle-form-link');
+        const appContent = document.getElementById('app-content');
+        const signoutBtn = document.getElementById('signout-btn');
+
+        // --- Handle User Authentication State ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 // User is signed in.
                 currentUserId = user.uid;
-                authStatus.textContent = `Connected (User ID: ${currentUserId})`;
-                console.log("User is signed in with UID:", currentUserId);
+                authStatus.textContent = `Connected (${user.email})`;
+                authContainer.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                signoutBtn.classList.remove('hidden');
             } else {
-                // User is signed out. Sign them in anonymously.
-                authStatus.textContent = 'Signing in...';
-                signInAnonymously(auth).catch((error) => {
-                    console.error("Anonymous sign-in failed:", error);
-                    authStatus.textContent = 'Connection failed.';
-                });
+                // User is signed out.
+                currentUserId = null;
+                authStatus.textContent = 'Not connected';
+                authContainer.classList.remove('hidden');
+                appContent.classList.add('hidden');
+                signoutBtn.classList.add('hidden');
+            }
+        });
+        
+        // --- Form Toggle Logic ---
+        toggleFormLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (signupForm.classList.contains('hidden')) {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                toggleFormLink.textContent = 'Already have an account? Login';
+            } else {
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                toggleFormLink.textContent = 'Need an account? Sign Up';
             }
         });
 
-        // --- Get all the HTML elements we need ---
+        // --- Handle Sign Up ---
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(userCredential => console.log('Signed up:', userCredential.user))
+                .catch(error => alert(error.message));
+        });
+
+        // --- Handle Login ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .then(userCredential => console.log('Logged in:', userCredential.user))
+                .catch(error => alert(error.message));
+        });
+
+        // --- Handle Sign Out ---
+        signoutBtn.addEventListener('click', () => {
+            signOut(auth).catch(error => console.error('Sign out error', error));
+        });
+
+
+        // --- Get Modal elements ---
         const modal = document.getElementById('pulse-modal');
         const openBtn = document.getElementById('open-pulse-btn');
         const pulseForm = document.getElementById('pulse-form');
@@ -117,7 +181,7 @@
         pulseForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             if (!currentUserId) {
-                console.error("No user signed in. Cannot submit.");
+                alert("You must be logged in to submit a pulse check.");
                 return;
             }
 
@@ -131,21 +195,18 @@
             };
 
             const docId = `${currentUserId}_${getFormattedDate()}`;
-            console.log(`Submitting data to Firestore with doc ID: ${docId}`);
-
+            
             try {
-                // This writes the data to Firestore!
                 await setDoc(doc(db, "pulseCheckins", docId), pulseData);
-                console.log("Document successfully written!");
                 hideModal();
             } catch (error) {
                 console.error("Error writing document: ", error);
+                alert("Could not save your pulse check. Please try again.");
             }
         });
 
         // --- Event listener for the "Skip for now" button ---
         skipNowBtn.addEventListener('click', () => {
-            console.log('Snoozing for 10 minutes.');
             const tenMinutesFromNow = new Date().getTime() + (10 * 60 * 1000);
             localStorage.setItem('snoozeUntil', tenMinutesFromNow);
             hideModal();
@@ -154,22 +215,21 @@
         // --- Event listener for the "Skip for today" button ---
         skipTodayBtn.addEventListener('click', async () => {
             if (!currentUserId) {
-                console.error("No user signed in. Cannot skip.");
+                alert("You must be logged in to skip.");
                 return;
             }
+
             const docId = `${currentUserId}_${getFormattedDate()}`;
-            console.log(`Skipping for today. Writing to doc ID: ${docId}`);
 
             try {
-                // This writes the "skipped" status to Firestore!
                 await setDoc(doc(db, "pulseCheckins", docId), {
                     status: 'skipped',
                     submittedAt: new Date().toISOString()
                 });
-                console.log("Document successfully marked as skipped!");
                 hideModal();
             } catch (error) {
                 console.error("Error writing skipped document: ", error);
+                alert("Could not save your choice. Please try again.");
             }
         });
 
