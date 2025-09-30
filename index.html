@@ -9,13 +9,13 @@
 <body>
     <header>
         <h1>Welcome</h1>
-        <p>Your centeredness journey continues.</p>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <p style="font-size: 0.8em; color: #555; margin: 0;">Status: <span id="auth-status">Connecting...</span></p>
             <button id="signout-btn" class="hidden" style="padding: 5px 10px;">Sign Out</button>
         </div>
     </header>
 
+    <!-- Login/Signup Forms -->
     <div id="auth-container" style="margin-top: 20px;">
         <form id="login-form">
             <h3>Login</h3>
@@ -32,10 +32,16 @@
         <p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
     </div>
 
+    <!-- Main App Content (Dashboard) -->
     <main id="app-content" class="hidden">
-        <button id="open-pulse-btn">Open Daily Pulse</button>
-        </main>
+        <div id="dashboard">
+            <h2>Dashboard</h2>
+            <p>Your daily reflection and habit tracking will appear here.</p>
+            <button id="open-pulse-btn">Do Today's Pulse Check</button>
+        </div>
+    </main>
     
+    <!-- Daily Pulse Check-in Modal -->
     <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content">
             <h2 id="modal-title">Daily Pulse Check-in</h2>
@@ -64,11 +70,12 @@
         </div>
     </div>
 
+    <!-- All JavaScript is now inside this single module script -->
     <script type="module">
         // Import the functions you need from the Firebase SDKs
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
@@ -96,6 +103,48 @@
         const toggleFormLink = document.getElementById('toggle-form-link');
         const appContent = document.getElementById('app-content');
         const signoutBtn = document.getElementById('signout-btn');
+        const modal = document.getElementById('pulse-modal');
+        const openBtn = document.getElementById('open-pulse-btn');
+        const pulseForm = document.getElementById('pulse-form');
+        const skipNowBtn = document.getElementById('skip-now-btn');
+        const skipTodayBtn = document.getElementById('skip-today-btn');
+
+        // --- Get YYYY-MM-DD date string ---
+        function getFormattedDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // --- Function to check if pulse is needed and show modal ---
+        async function checkAndShowPulseModal() {
+            if (!currentUserId) return;
+
+            // Check 1: Is the user snoozing?
+            const snoozeUntil = localStorage.getItem('snoozeUntil');
+            if (snoozeUntil && new Date().getTime() < parseInt(snoozeUntil, 10)) {
+                console.log("Pulse check is snoozed.");
+                return;
+            }
+
+            // Check 2: Has the user already completed or skipped today in Firestore?
+            try {
+                const todayDocId = `${currentUserId}_${getFormattedDate()}`;
+                const docRef = doc(db, "pulseCheckins", todayDocId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    console.log("Pulse check already handled for today.");
+                } else {
+                    console.log("Showing pulse check modal automatically.");
+                    showModal();
+                }
+            } catch (error) {
+                console.error("Error checking for pulse document:", error);
+            }
+        }
 
         // --- Handle User Authentication State ---
         onAuthStateChanged(auth, (user) => {
@@ -106,6 +155,7 @@
                 authContainer.classList.add('hidden');
                 appContent.classList.remove('hidden');
                 signoutBtn.classList.remove('hidden');
+                checkAndShowPulseModal(); // This is the new part!
             } else {
                 // User is signed out.
                 currentUserId = null;
@@ -119,129 +169,74 @@
         // --- Form Toggle Logic ---
         toggleFormLink.addEventListener('click', (e) => {
             e.preventDefault();
-            if (signupForm.classList.contains('hidden')) {
-                loginForm.classList.add('hidden');
-                signupForm.classList.remove('hidden');
-                toggleFormLink.textContent = 'Already have an account? Login';
-            } else {
-                loginForm.classList.remove('hidden');
-                signupForm.classList.add('hidden');
-                toggleFormLink.textContent = 'Need an account? Sign Up';
-            }
+            signupForm.classList.toggle('hidden');
+            loginForm.classList.toggle('hidden');
+            toggleFormLink.textContent = signupForm.classList.contains('hidden') 
+                ? 'Need an account? Sign Up' 
+                : 'Already have an account? Login';
         });
 
-        // --- Handle Sign Up ---
+        // --- Auth Form Handlers ---
         signupForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('signup-email').value;
             const password = document.getElementById('signup-password').value;
             createUserWithEmailAndPassword(auth, email, password)
-                .then(userCredential => console.log('Signed up:', userCredential.user))
                 .catch(error => alert(error.message));
         });
-
-        // --- Handle Login ---
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             signInWithEmailAndPassword(auth, email, password)
-                .then(userCredential => console.log('Logged in:', userCredential.user))
                 .catch(error => alert(error.message));
         });
+        signoutBtn.addEventListener('click', () => signOut(auth));
 
-        // --- Handle Sign Out ---
-        signoutBtn.addEventListener('click', () => {
-            signOut(auth).catch(error => console.error('Sign out error', error));
-        });
-
-
-        // --- Get Modal elements ---
-        const modal = document.getElementById('pulse-modal');
-        const openBtn = document.getElementById('open-pulse-btn');
-        const pulseForm = document.getElementById('pulse-form');
-        const skipNowBtn = document.getElementById('skip-now-btn');
-        const skipTodayBtn = document.getElementById('skip-today-btn');
-
+        // --- Modal Logic ---
         function showModal() { modal.classList.remove('hidden'); }
         function hideModal() { modal.classList.add('hidden'); }
         
         openBtn.addEventListener('click', showModal);
 
-        // --- Get YYYY-MM-DD date string ---
-        function getFormattedDate() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        // --- Event listener for the "Submit" button ---
+        // --- Pulse Form Handlers ---
         pulseForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (!currentUserId) {
-                alert("You must be logged in to submit a pulse check.");
-                return;
-            }
-
-            const formData = new FormData(pulseForm);
+            if (!currentUserId) return;
+            const docId = `${currentUserId}_${getFormattedDate()}`;
             const pulseData = {
-                steadiness: parseInt(formData.get('steadiness'), 10),
-                presence: parseInt(formData.get('presence'), 10),
-                connection: parseInt(formData.get('connection'), 10),
+                steadiness: parseInt(pulseForm.steadiness.value, 10),
+                presence: parseInt(pulseForm.presence.value, 10),
+                connection: parseInt(pulseForm.connection.value, 10),
                 status: 'completed',
                 submittedAt: new Date().toISOString()
             };
-
-            const docId = `${currentUserId}_${getFormattedDate()}`;
-            
-            try {
-                await setDoc(doc(db, "pulseCheckins", docId), pulseData);
-                hideModal();
-            } catch (error) {
-                console.error("Error writing document: ", error);
-                alert("Could not save your pulse check. Please try again.");
-            }
+            await setDoc(doc(db, "pulseCheckins", docId), pulseData);
+            hideModal();
         });
 
-        // --- Event listener for the "Skip for now" button ---
         skipNowBtn.addEventListener('click', () => {
             const tenMinutesFromNow = new Date().getTime() + (10 * 60 * 1000);
             localStorage.setItem('snoozeUntil', tenMinutesFromNow);
             hideModal();
         });
 
-        // --- Event listener for the "Skip for today" button ---
         skipTodayBtn.addEventListener('click', async () => {
-            if (!currentUserId) {
-                alert("You must be logged in to skip.");
-                return;
-            }
-
+            if (!currentUserId) return;
             const docId = `${currentUserId}_${getFormattedDate()}`;
-
-            try {
-                await setDoc(doc(db, "pulseCheckins", docId), {
-                    status: 'skipped',
-                    submittedAt: new Date().toISOString()
-                });
-                hideModal();
-            } catch (error) {
-                console.error("Error writing skipped document: ", error);
-                alert("Could not save your choice. Please try again.");
-            }
-        });
-
-        // --- Logic to update the number display next to each slider ---
-        const sliders = document.querySelectorAll('.slider-group input[type="range"]');
-        sliders.forEach(slider => {
-            const valueSpan = slider.nextElementSibling;
-            slider.addEventListener('input', (e) => {
-                valueSpan.textContent = e.target.value;
+            await setDoc(doc(db, "pulseCheckins", docId), {
+                status: 'skipped',
+                submittedAt: new Date().toISOString()
             });
+            hideModal();
         });
 
+        // --- Slider value display logic ---
+        document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => {
+            const valueSpan = slider.nextElementSibling;
+            slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; });
+        });
     </script>
 </body>
 </html>
+
