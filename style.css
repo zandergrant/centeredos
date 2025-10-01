@@ -1,150 +1,245 @@
-/* Basic Styles */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f0f2f5;
-    color: #1c1e21;
-    margin: 0;
-    padding: 20px;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centered - Your Daily Pulse</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Welcome</h1>
+        <div class="header-controls">
+            <p>Status: <span id="auth-status">Connecting...</span></p>
+            <button id="signout-btn" class="hidden">Sign Out</button>
+        </div>
+    </header>
 
-header, #auth-container, main {
-    max-width: 600px;
-    margin: 0 auto 20px auto;
-}
+    <div id="auth-container">
+        <form id="login-form"><h3>Login</h3><input type="email" id="login-email" placeholder="Email" required><br><br><input type="password" id="login-password" placeholder="Password" required><br><br><button type="submit">Login</button></form><form id="signup-form" class="hidden"><h3>Sign Up</h3><input type="email" id="signup-email" placeholder="Email" required><br><br><input type="password" id="signup-password" placeholder="Password" required><br><br><button type="submit">Sign Up</button></form><p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
+    </div>
 
-.header-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.8em;
-    color: #555;
-}
+    <main id="app-content" class="hidden">
+        <div id="dashboard">
+            <!-- Tile 1: Centeredness Graph -->
+            <div class="tile full-width">
+                <div class="tile-header">
+                    <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
+                    <div class="chart-controls">
+                        <button id="chart-today-btn">Today</button>
+                        <button id="chart-7d-btn" class="active">7D</button>
+                        <button id="chart-30d-btn">30D</button>
+                    </div>
+                </div>
+                <div class="tile-content chart-container">
+                    <canvas id="centeredness-chart"></canvas>
+                    <div id="chart-no-data" class="hidden">Not enough data to display</div>
+                </div>
+                <div class="tile-footer">
+                    <button id="pulse-action-btn" class="btn-primary">Do Today's Pulse Check</button>
+                </div>
+            </div>
 
-#auth-container {
-    padding: 25px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
+            <!-- Tile 2: Daily Reflection -->
+            <div class="tile full-width" id="reflection-tile">
+                <div class="tile-header">
+                    <h3>Daily Reflection</h3>
+                    <div class="date-nav">
+                        <button id="prev-day-btn">&lt;</button>
+                        <span id="reflection-date-display"></span>
+                        <button id="next-day-btn">&gt;</button>
+                    </div>
+                </div>
+                <div class="tile-content">
+                    <p id="ai-prompt-display">Loading your daily prompt...</p>
+                    <textarea id="reflection-entry" placeholder="Write your reflection here..." disabled></textarea>
+                </div>
+                <div class="tile-footer">
+                    <button id="reflection-action-btn">Edit</button>
+                </div>
+            </div>
+            
+            <!-- Tile 3: Habit Tracker -->
+            <div class="tile full-width" id="habits-tile">
+                <div class="tile-header">
+                    <h3>Today's Habits</h3>
+                </div>
+                <div class="tile-content">
+                    <ul id="habit-list"></ul>
+                </div>
+                <div class="tile-footer">
+                    <button id="add-habit-btn" class="btn-primary">Add Habit</button>
+                </div>
+            </div>
 
-input, textarea {
-    padding: 10px;
-    width: calc(100% - 22px);
-    border: 1px solid #dddfe2;
-    border-radius: 6px;
-    font-family: inherit;
-}
+        </div>
+    </main>
+    
+    <!-- Modals -->
+    <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pulse-modal-title"><div class="modal-content"><h2 id="pulse-modal-title">Daily Pulse Check-in</h2><form id="pulse-form"><div class="slider-group"><label for="steadiness">How steady do you feel right now?</label><input type="range" id="steadiness" name="steadiness" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="presence">How present were you today?</label><input type="range" id="presence" name="presence" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="connection">How connected vs. reactive did you feel?</label><input type="range" id="connection" name="connection" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="button-group"><button type="submit" class="btn-primary">Submit</button><button type="button" id="skip-now-btn">Skip for now</button><button type="button" id="skip-today-btn">Skip for today</button></div></form></div></div>
+    <div id="add-habit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="habit-modal-title"><div class="modal-content"><h2 id="habit-modal-title">Create a New Habit</h2><form id="add-habit-form"><div class="form-group"><label for="habit-name">Habit Name</label><input type="text" id="habit-name" required></div><div class="form-group"><label for="habit-desc">Description (Optional)</label><textarea id="habit-desc"></textarea></div><div class="button-group"><button type="submit" class="btn-primary">Save Habit</button><button type="button" id="cancel-habit-btn">Cancel</button></div></form></div></div>
 
-button {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    background-color: #e4e6eb;
-    font-weight: bold;
-    color: #1c1e21;
-}
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-button:disabled {
-    background-color: #d1d3d8;
-    cursor: not-allowed;
-    color: #8a8d91;
-}
+        const firebaseConfig = { apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk", authDomain: "centeredos.firebaseapp.com", projectId: "centeredos", storageBucket: "centeredos.firebasestorage.app", messagingSenderId: "129785779353", appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408", measurementId: "G-7S84S0NHQV" };
 
-button.btn-primary {
-    background-color: #1877f2;
-    color: white;
-}
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-.hidden {
-    display: none !important;
-}
+        let currentUserId = null;
+        let centerednessChart = null;
+        let reflectionDate = new Date();
+        let currentChartTimeframe = 7; 
 
-/* Dashboard & Tile Styles */
-#dashboard {
-    display: grid;
-    gap: 20px;
-}
+        const authContainer = document.getElementById('auth-container');
+        const appContent = document.getElementById('app-content');
+        const signoutBtn = document.getElementById('signout-btn');
+        const authStatus = document.getElementById('auth-status');
+        
+        // Modals
+        const pulseModal = document.getElementById('pulse-modal');
+        const addHabitModal = document.getElementById('add-habit-modal');
 
-.tile {
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-}
+        // Centeredness Tile
+        const pulseActionBtn = document.getElementById('pulse-action-btn');
+        const chartCanvas = document.getElementById('centeredness-chart');
+        const chartNoData = document.getElementById('chart-no-data');
+        const chartTodayBtn = document.getElementById('chart-today-btn');
+        const chart7dBtn = document.getElementById('chart-7d-btn');
+        const chart30dBtn = document.getElementById('chart-30d-btn');
+        const compositeScoreDisplay = document.getElementById('composite-score-display');
+        
+        // Reflection Tile
+        const aiPromptDisplay = document.getElementById('ai-prompt-display');
+        const reflectionEntry = document.getElementById('reflection-entry');
+        const reflectionActionBtn = document.getElementById('reflection-action-btn');
+        const prevDayBtn = document.getElementById('prev-day-btn');
+        const nextDayBtn = document.getElementById('next-day-btn');
+        const reflectionDateDisplay = document.getElementById('reflection-date-display');
+        
+        // Habit Tile
+        const habitList = document.getElementById('habit-list');
+        const addHabitBtn = document.getElementById('add-habit-btn');
+        const addHabitForm = document.getElementById('add-habit-form');
+        const cancelHabitBtn = document.getElementById('cancel-habit-btn');
 
-.tile.full-width {
-    grid-column: 1 / -1;
-}
+        function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
-.tile-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 15px;
-}
+        function createOrUpdateChart(chartData, chartType) { /* ... same as before ... */ }
+        async function loadPulseData() { /* ... same as before ... */ }
+        async function loadReflectionData(date) { /* ... same as before ... */ }
+        async function generateAIPrompt(date) { /* ... same as before ... */ }
+        
+        async function loadHabitsData() {
+            if (!currentUserId) return;
+            habitList.innerHTML = ''; // Clear existing list
 
-.tile-header h3 { 
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.composite-score {
-    background-color: #e7f3ff;
-    color: #1877f2;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.9em;
-}
+            const habitsRef = collection(db, "habits");
+            const q = query(habitsRef, where("userId", "==", currentUserId), orderBy("createdAt", "asc"));
+            const querySnapshot = await getDocs(q);
+            
+            const todayStr = getFormattedDate(new Date());
+            const habitLogsRef = collection(db, "habitLogs");
+            const logsQuery = query(habitLogsRef, where("userId", "==", currentUserId), where("date", "==", todayStr));
+            const logsSnapshot = await getDocs(logsQuery);
+            const completedHabits = new Set(logsSnapshot.docs.map(d => d.data().habitId));
 
-.chart-controls { display: flex; gap: 5px; }
-.chart-controls button {
-    padding: 5px 10px;
-    background-color: #f0f2f5;
-    border: 1px solid transparent;
-}
-.chart-controls button.active {
-    background-color: #e7f3ff;
-    color: #1877f2;
-    border-color: #1877f2;
-}
+            querySnapshot.forEach(doc => {
+                const habit = doc.data();
+                const habitId = doc.id;
+                
+                const li = document.createElement('li');
+                li.className = 'habit-item';
+                li.innerHTML = `
+                    <label>
+                        <input type="checkbox" data-habit-id="${habitId}" ${completedHabits.has(habitId) ? 'checked' : ''}>
+                        <span>${habit.name}</span>
+                    </label>
+                `;
+                habitList.appendChild(li);
+            });
+        }
 
-.tile-content { width: 100%; }
-.chart-container {
-    position: relative;
-    min-height: 250px; /* Give canvas a default size */
-}
-#chart-no-data {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    min-height: 250px;
-    color: #8a8d91;
-    font-style: italic;
-}
+        habitList.addEventListener('change', async (e) => {
+            if (e.target.type === 'checkbox') {
+                const habitId = e.target.dataset.habitId;
+                const isChecked = e.target.checked;
+                const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
+                
+                await setDoc(doc(db, "habitLogs", logId), {
+                    userId: currentUserId,
+                    habitId: habitId,
+                    date: getFormattedDate(new Date()),
+                    completed: isChecked
+                });
+            }
+        });
 
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                currentUserId = user.uid; authStatus.textContent = `Connected (${user.email})`;
+                authContainer.classList.add('hidden'); appContent.classList.remove('hidden'); signoutBtn.classList.remove('hidden');
+                reflectionDate = new Date();
+                loadPulseData(); 
+                loadReflectionData(reflectionDate);
+                loadHabitsData();
+                const isSnoozed = localStorage.getItem('snoozeUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozeUntil'), 10);
+                getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
+                    if (!docSnap.exists() && !isSnoozed) showModal(pulseModal);
+                });
+            } else { /* ... same as before ... */ }
+        });
+        
+        function showModal(modalEl) { modalEl.classList.remove('hidden'); }
+        function hideModal(modalEl) { modalEl.classList.add('hidden'); }
+        
+        pulseActionBtn.addEventListener('click', () => showModal(pulseModal));
+        addHabitBtn.addEventListener('click', () => showModal(addHabitModal));
+        cancelHabitBtn.addEventListener('click', () => hideModal(addHabitModal));
 
-/* Reflection Tile Specifics */
-.date-nav { display: flex; align-items: center; gap: 15px; }
-.date-nav button { background: none; border: none; font-size: 1.5em; font-weight: bold; cursor: pointer; padding: 0 10px; }
-.date-nav button:disabled { color: #ccc; cursor: not-allowed; }
-#ai-prompt-display { font-style: italic; color: #606770; margin-bottom: 15px; min-height: 20px; }
-#reflection-entry { min-height: 100px; resize: vertical; }
-#reflection-entry:disabled { background-color: #f5f5f5; color: #1c1e21; }
+        addHabitForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const habitName = document.getElementById('habit-name').value;
+            const habitDesc = document.getElementById('habit-desc').value;
+            if (!currentUserId || !habitName) return;
 
-.tile-footer { margin-top: 20px; text-align: right; }
+            await addDoc(collection(db, "habits"), {
+                userId: currentUserId,
+                name: habitName,
+                description: habitDesc,
+                cadence: { type: "daily" }, // Defaulting to daily for now
+                createdAt: new Date().toISOString()
+            });
 
-/* Modal Styles */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background-color: #fff; padding: 30px; border-radius: 8px; width: 90%; max-width: 500px; }
-.slider-group { margin-bottom: 20px; }
-.slider-group label { display: block; margin-bottom: 10px; }
-.slider-group input[type="range"] { width: 100%; }
-.button-group { margin-top: 30px; display: flex; justify-content: space-between; gap: 10px; }
+            addHabitForm.reset();
+            hideModal(addHabitModal);
+            loadHabitsData();
+        });
+
+        document.getElementById('pulse-form').addEventListener('submit', async (event) => { /* ... same as before, but call hideModal(pulseModal) ... */ });
+        document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozeUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(pulseModal); });
+        document.getElementById('skip-today-btn').addEventListener('click', async () => { /* ... same as before, but call hideModal(pulseModal) ... */ });
+        
+        // --- Other event listeners remain the same ---
+        document.getElementById('toggle-form-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('signup-form').classList.toggle('hidden'); document.getElementById('login-form').classList.toggle('hidden'); e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login'; });
+        document.getElementById('signup-form').addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, e.target['signup-email'].value, e.target['signup-password'].value).catch(error => alert(error.message)); });
+        document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message)); });
+        signoutBtn.addEventListener('click', () => signOut(auth));
+        prevDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() - 1); loadReflectionData(reflectionDate); });
+        nextDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() + 1); loadReflectionData(reflectionDate); });
+        reflectionActionBtn.addEventListener('click', async () => { /* ... same as before ... */ });
+        chartTodayBtn.addEventListener('click', () => { currentChartTimeframe = 1; updateChartControls(); });
+        chart7dBtn.addEventListener('click', () => { currentChartTimeframe = 7; updateChartControls(); });
+        chart30dBtn.addEventListener('click', () => { currentChartTimeframe = 30; updateChartControls(); });
+        function updateChartControls() { /* ... same as before ... */ }
+        document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
+    
+    </script>
+</body>
+</html>
 
