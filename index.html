@@ -181,7 +181,6 @@
                     chartNoData.classList.remove('hidden');
                 } else {
                     chartCanvas.classList.remove('hidden');
-                    // THIS IS THE LINE THAT WAS FIXED
                     chartNoData.classList.add('hidden');
                     createOrUpdateChart(chartData, currentChartTimeframe === 1 ? 'bar' : 'line');
                 }
@@ -362,22 +361,34 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                currentUserId = user.uid; authStatus.textContent = `Connected (${user.email})`;
-                authContainer.classList.add('hidden'); appContent.classList.remove('hidden'); signoutBtn.classList.remove('hidden');
+                currentUserId = user.uid;
+                authStatus.textContent = `Connected (${user.email})`;
+                authContainer.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                signoutBtn.classList.remove('hidden');
                 reflectionDate = new Date();
                 
-                await loadPulseData(); 
-                await loadReflectionData(reflectionDate);
-                await loadHabitsData();
+                // THIS IS THE CHANGED BLOCK
+                Promise.all([
+                    loadPulseData(),
+                    loadReflectionData(reflectionDate),
+                    loadHabitsData()
+                ]).then(() => {
+                    // This logic runs after all data has attempted to load
+                    const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
+                    getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
+                        if (!docSnap.exists() && !isSnoozed) {
+                            showModal(pulseModal);
+                        }
+                    });
+                });
 
-                const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
-                const docSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
-                if (!docSnap.exists() && !isSnoozed) {
-                    showModal(pulseModal);
-                }
             } else { 
-                currentUserId = null; authStatus.textContent = 'Not connected';
-                authContainer.classList.remove('hidden'); appContent.classList.add('hidden'); signoutBtn.classList.add('hidden');
+                currentUserId = null;
+                authStatus.textContent = 'Not connected';
+                authContainer.classList.remove('hidden');
+                appContent.classList.add('hidden');
+                signoutBtn.classList.add('hidden');
              }
         });
         
