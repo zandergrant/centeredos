@@ -343,8 +343,25 @@
                 const habitId = target.dataset.habitId;
                 const isChecked = target.checked;
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
+                
+                // 1. Update Firestore
                 await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked });
-                await loadHabitsData();
+
+                // 2. Fetch logs for ONLY this habit to recalculate streak
+                const habitLogsRef = collection(db, "habitLogs");
+                const q = query(habitLogsRef, where("userId", "==", currentUserId), where("habitId", "==", habitId));
+                const logsSnapshot = await getDocs(q);
+                const habitLogs = logsSnapshot.docs.map(d => d.data());
+                
+                // 3. Recalculate streak
+                const newStreak = calculateStreak(habitLogs);
+
+                // 4. Find the specific span and update it without reloading the whole list
+                const streakSpan = target.closest('.habit-item').querySelector('.habit-streak');
+                if (streakSpan) {
+                    streakSpan.textContent = newStreak > 0 ? `🔥 ${newStreak}` : '';
+                }
+
             } else if (target.classList.contains('remove-habit-btn')) {
                 const habitId = target.dataset.habitId;
                 if (confirm('Are you sure you want to delete this habit and all its history?')) {
@@ -354,7 +371,7 @@
                     logsSnapshot.forEach(logDoc => {
                         deleteDoc(doc(db, "habitLogs", logDoc.id));
                     });
-                    await loadHabitsData();
+                    await loadHabitsData(); // Full reload is okay here since an item is removed
                 }
             }
         });
@@ -368,13 +385,11 @@
                 signoutBtn.classList.remove('hidden');
                 reflectionDate = new Date();
                 
-                // THIS IS THE CHANGED BLOCK
                 Promise.all([
                     loadPulseData(),
                     loadReflectionData(reflectionDate),
                     loadHabitsData()
                 ]).then(() => {
-                    // This logic runs after all data has attempted to load
                     const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
                     getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
                         if (!docSnap.exists() && !isSnoozed) {
