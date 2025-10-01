@@ -160,7 +160,7 @@
 
         async function loadPulseData() {
             try {
-                // Update composite score for today
+                if (!currentUserId) return;
                 const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
                 if (todayDocSnap.exists() && todayDocSnap.data().status === 'completed') {
                     compositeScoreDisplay.textContent = todayDocSnap.data().compositeScore;
@@ -168,7 +168,6 @@
                     compositeScoreDisplay.textContent = '--';
                 }
                 
-                // Fetch data for chart
                 let chartData = [];
                 const daysToFetch = currentChartTimeframe;
                 for (let i = daysToFetch - 1; i >= 0; i--) {
@@ -182,11 +181,11 @@
                     chartNoData.classList.remove('hidden');
                 } else {
                     chartCanvas.classList.remove('hidden');
-                    chartNoData.add('hidden');
+                    // THIS IS THE LINE THAT WAS FIXED
+                    chartNoData.classList.add('hidden');
                     createOrUpdateChart(chartData, currentChartTimeframe === 1 ? 'bar' : 'line');
                 }
                 
-                // Update pulse button state
                 if (todayDocSnap.exists()) {
                     pulseActionBtn.textContent = "Today's Pulse Submitted"; pulseActionBtn.disabled = true;
                 } else {
