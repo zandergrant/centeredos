@@ -171,7 +171,6 @@
 
             const docSnap = await getDoc(doc(db, "reflections", `${currentUserId}_${dateStr}`));
             
-            // BUG FIX: Regenerate prompt if the document exists but the prompt text is missing.
             if (docSnap.exists() && docSnap.data().promptText) {
                 aiPromptDisplay.textContent = docSnap.data().promptText;
                 reflectionEntry.value = docSnap.data().entryText || '';
@@ -269,7 +268,7 @@
         }
         chartTodayBtn.addEventListener('click', () => { currentChartTimeframe = 1; updateChartControls(); });
         chart7dBtn.addEventListener('click', () => { currentChartTimeframe = 7; updateChartControls(); });
-        chart30dBtn.addEventListener('click', => { currentChartTimeframe = 30; updateChartControls(); });
+        chart30dBtn.addEventListener('click', () => { currentChartTimeframe = 30; updateChartControls(); });
 
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
     </script>
