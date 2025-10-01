@@ -180,7 +180,6 @@
             } else {
                 reflectionEntry.value = '';
                 if (dateStr === getFormattedDate(new Date())) {
-                    // Temporarily disable controls to prevent race condition
                     reflectionEntry.disabled = true;
                     submitReflectionBtn.disabled = true;
                     generateAIPrompt(date);
@@ -215,7 +214,9 @@
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() });
             } catch (error) {
                 console.error("AI Prompt generation failed:", error);
-                aiPromptDisplay.textContent = "What is one thought you've had today that you'd like to look at more closely?";
+                const fallbackPrompt = "What is one thought you've had today that you'd like to look at more closely?";
+                aiPromptDisplay.textContent = fallbackPrompt;
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() });
             } finally {
                 reflectionEntry.classList.remove('hidden'); 
                 submitReflectionBtn.classList.remove('hidden'); 
