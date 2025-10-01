@@ -179,7 +179,7 @@
                 chartNoData.classList.remove('hidden');
             } else {
                 chartCanvas.classList.remove('hidden');
-                chartNoData.add('hidden');
+                chartNoData.classList.add('hidden'); // <-- Bug fix was here
                 createOrUpdateChart(chartData, currentChartTimeframe === 1 ? 'bar' : 'line');
             }
             
@@ -328,6 +328,12 @@
                 const habitId = target.dataset.habitId;
                 if (confirm('Are you sure you want to delete this habit? This cannot be undone.')) {
                     await deleteDoc(doc(db, "habits", habitId));
+                    // Also delete associated logs
+                    const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId));
+                    const logsSnapshot = await getDocs(logsQuery);
+                    logsSnapshot.forEach(logDoc => {
+                        deleteDoc(doc(db, "habitLogs", logDoc.id));
+                    });
                     await loadHabitsData();
                 }
             }
@@ -427,4 +433,3 @@
     </script>
 </body>
 </html>
-
