@@ -25,7 +25,7 @@
             <!-- Tile 1: Centeredness Graph -->
             <div class="tile full-width">
                 <div class="tile-header">
-                    <h3>Centeredness</h3>
+                    <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
                     <div class="chart-controls">
                         <button id="chart-today-btn">Today</button>
                         <button id="chart-7d-btn" class="active">7D</button>
@@ -53,10 +53,10 @@
                 </div>
                 <div class="tile-content">
                     <p id="ai-prompt-display">Loading your daily prompt...</p>
-                    <textarea id="reflection-entry" placeholder="Write your reflection here..."></textarea>
+                    <textarea id="reflection-entry" placeholder="Write your reflection here..." disabled></textarea>
                 </div>
                 <div class="tile-footer">
-                    <button id="submit-reflection-btn">Save Reflection</button>
+                    <button id="reflection-action-btn">Edit</button>
                 </div>
             </div>
         </div>
@@ -88,7 +88,7 @@
         const pulseActionBtn = document.getElementById('pulse-action-btn');
         const aiPromptDisplay = document.getElementById('ai-prompt-display');
         const reflectionEntry = document.getElementById('reflection-entry');
-        const submitReflectionBtn = document.getElementById('submit-reflection-btn');
+        const reflectionActionBtn = document.getElementById('reflection-action-btn');
         const prevDayBtn = document.getElementById('prev-day-btn');
         const nextDayBtn = document.getElementById('next-day-btn');
         const reflectionDateDisplay = document.getElementById('reflection-date-display');
@@ -97,6 +97,7 @@
         const chartTodayBtn = document.getElementById('chart-today-btn');
         const chart7dBtn = document.getElementById('chart-7d-btn');
         const chart30dBtn = document.getElementById('chart-30d-btn');
+        const compositeScoreDisplay = document.getElementById('composite-score-display');
 
         function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
@@ -139,6 +140,15 @@
         }
 
         async function loadPulseData() {
+            // Update composite score for today
+            const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
+            if (todayDocSnap.exists() && todayDocSnap.data().status === 'completed') {
+                compositeScoreDisplay.textContent = todayDocSnap.data().compositeScore;
+            } else {
+                compositeScoreDisplay.textContent = '--';
+            }
+            
+            // Fetch data for chart
             let chartData = [];
             const daysToFetch = currentChartTimeframe;
             for (let i = daysToFetch - 1; i >= 0; i--) {
@@ -156,7 +166,7 @@
                 createOrUpdateChart(chartData, currentChartTimeframe === 1 ? 'bar' : 'line');
             }
             
-            const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
+            // Update pulse button state
             if (todayDocSnap.exists()) {
                 pulseActionBtn.textContent = "Today's Pulse Submitted"; pulseActionBtn.disabled = true;
             } else {
@@ -171,23 +181,23 @@
 
             const docSnap = await getDoc(doc(db, "reflections", `${currentUserId}_${dateStr}`));
             
+            reflectionEntry.disabled = true;
+            reflectionActionBtn.textContent = 'Edit';
+
             if (docSnap.exists() && docSnap.data().promptText) {
                 aiPromptDisplay.textContent = docSnap.data().promptText;
                 reflectionEntry.value = docSnap.data().entryText || '';
+                reflectionActionBtn.textContent = reflectionEntry.value ? 'Edit' : 'Write';
                 reflectionEntry.classList.remove('hidden');
-                submitReflectionBtn.classList.remove('hidden');
-                reflectionEntry.disabled = false;
-                submitReflectionBtn.disabled = false;
+                reflectionActionBtn.classList.remove('hidden');
             } else {
                 reflectionEntry.value = '';
                 if (dateStr === getFormattedDate(new Date())) {
-                    reflectionEntry.disabled = true;
-                    submitReflectionBtn.disabled = true;
                     generateAIPrompt(date);
                 } else {
                     aiPromptDisplay.textContent = "No reflection recorded for this day.";
                     reflectionEntry.classList.add('hidden');
-                    submitReflectionBtn.classList.add('hidden');
+                    reflectionActionBtn.classList.add('hidden');
                 }
             }
         }
@@ -211,7 +221,6 @@
                 if (!response.ok) throw new Error(`API Error: ${response.status}`);
                 const result = await response.json();
                 const newPrompt = result.candidates[0].content.parts[0].text;
-
                 aiPromptDisplay.textContent = newPrompt;
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } catch (error) {
@@ -221,9 +230,8 @@
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } finally {
                 reflectionEntry.classList.remove('hidden'); 
-                submitReflectionBtn.classList.remove('hidden'); 
-                reflectionEntry.disabled = false;
-                submitReflectionBtn.disabled = false;
+                reflectionActionBtn.classList.remove('hidden'); 
+                reflectionActionBtn.textContent = 'Write';
             }
         }
         
@@ -231,10 +239,10 @@
             if (user) {
                 currentUserId = user.uid; authStatus.textContent = `Connected (${user.email})`;
                 authContainer.classList.add('hidden'); appContent.classList.remove('hidden'); signoutBtn.classList.remove('hidden');
-                reflectionDate = new Date(); // Reset date on login
+                reflectionDate = new Date();
                 loadPulseData(); 
                 loadReflectionData(reflectionDate);
-                const isSnoozed = localStorage.getItem('snoozeUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozeUntil'), 10);
+                const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
                 getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
                     if (!docSnap.exists() && !isSnoozed) showModal();
                 });
@@ -251,14 +259,50 @@
         function showModal() { modal.classList.remove('hidden'); }
         function hideModal() { modal.classList.add('hidden'); }
         pulseActionBtn.addEventListener('click', showModal);
-        document.getElementById('pulse-form').addEventListener('submit', async (event) => { event.preventDefault(); if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { steadiness: parseInt(event.target.steadiness.value, 10), presence: parseInt(event.target.presence.value, 10), connection: parseInt(event.target.connection.value, 10), status: 'completed', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
-        document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozeUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(); });
+        
+        document.getElementById('pulse-form').addEventListener('submit', async (event) => { 
+            event.preventDefault(); 
+            if (!currentUserId) return; 
+            const steadiness = parseInt(event.target.steadiness.value, 10);
+            const presence = parseInt(event.target.presence.value, 10);
+            const connection = parseInt(event.target.connection.value, 10);
+            const compositeScore = Math.round((steadiness + presence + connection) / 3 * 10) / 10; // Average, rounded to 1 decimal
+
+            const docId = `${currentUserId}_${getFormattedDate(new Date())}`; 
+            await setDoc(doc(db, "pulseCheckins", docId), { 
+                steadiness, 
+                presence, 
+                connection, 
+                compositeScore,
+                status: 'completed', 
+                submittedAt: new Date().toISOString() 
+            }); 
+            loadPulseData(); 
+            hideModal(); 
+        });
+
+        document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(); });
         document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(); });
         
         prevDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() - 1); loadReflectionData(reflectionDate); });
         nextDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() + 1); loadReflectionData(reflectionDate); });
-        submitReflectionBtn.addEventListener('click', async () => { if (!currentUserId) return; await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(reflectionDate)}`), { entryText: reflectionEntry.value, updatedAt: new Date().toISOString() }, { merge: true }); });
         
+        reflectionActionBtn.addEventListener('click', async () => {
+            const isEditing = !reflectionEntry.disabled;
+            if (isEditing) {
+                // Currently editing, so save
+                if (!currentUserId) return;
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(reflectionDate)}`), { entryText: reflectionEntry.value, updatedAt: new Date().toISOString() }, { merge: true });
+                reflectionEntry.disabled = true;
+                reflectionActionBtn.textContent = 'Edit';
+            } else {
+                // Currently viewing, so switch to editing
+                reflectionEntry.disabled = false;
+                reflectionEntry.focus();
+                reflectionActionBtn.textContent = 'Save';
+            }
+        });
+
         function updateChartControls() {
             [chartTodayBtn, chart7dBtn, chart30dBtn].forEach(btn => btn.classList.remove('active'));
             if (currentChartTimeframe === 1) chartTodayBtn.classList.add('active');
