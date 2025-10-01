@@ -22,7 +22,7 @@
 
     <main id="app-content" class="hidden">
         <div id="dashboard">
-            <!-- Tiles for Centeredness, Reflection, and Habits -->
+            <!-- Tile 1: Centeredness Graph -->
             <div class="tile full-width">
                 <div class="tile-header">
                     <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
@@ -40,6 +40,7 @@
                     <button id="pulse-action-btn" class="btn-primary">Do Today's Pulse Check</button>
                 </div>
             </div>
+            <!-- Tile 2: Daily Reflection -->
             <div class="tile full-width" id="reflection-tile">
                 <div class="tile-header">
                     <h3>Daily Reflection</h3>
@@ -57,6 +58,7 @@
                     <button id="reflection-action-btn">Edit</button>
                 </div>
             </div>
+            <!-- Tile 3: Habit Tracker -->
             <div class="tile full-width" id="habits-tile">
                 <div class="tile-header">
                     <h3>Today's Habits</h3>
@@ -78,7 +80,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk", authDomain: "centeredos.firebaseapp.com", projectId: "centeredos", storageBucket: "centeredos.firebasestorage.app", messagingSenderId: "129785779353", appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408", measurementId: "G-7S84S0NHQV" };
 
@@ -118,8 +120,75 @@
 
         function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
-        function createOrUpdateChart(chartData, chartType) { /* ... same as before ... */ }
-        async function loadPulseData() { /* ... same as before ... */ }
+        function createOrUpdateChart(chartData, chartType) {
+            const ctx = chartCanvas.getContext('2d');
+            if (centerednessChart) centerednessChart.destroy();
+
+            let config;
+            if (chartType === 'bar') {
+                const data = chartData[0] || { steadiness: 0, presence: 0, connection: 0 };
+                config = {
+                    type: 'bar',
+                    data: {
+                        labels: ['Steadiness', 'Presence', 'Connection'],
+                        datasets: [{
+                            label: 'Today\'s Scores',
+                            data: [data.steadiness, data.presence, data.connection],
+                            backgroundColor: ['rgba(75, 192, 192, 0.2)', 'rgba(255, 159, 64, 0.2)', 'rgba(153, 102, 255, 0.2)'],
+                            borderColor: ['rgb(75, 192, 192)', 'rgb(255, 159, 64)', 'rgb(153, 102, 255)'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { scales: { y: { beginAtZero: true, max: 10 } }, plugins: { legend: { display: false } } }
+                };
+            } else { 
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: chartData.map(d => new Date(d.dateStr + 'T00:00:00').toLocaleDateString('en-us', { month: 'short', day: 'numeric' })),
+                        datasets: [
+                            { label: 'Steadiness', data: chartData.map(d => d.steadiness), borderColor: 'rgb(75, 192, 192)', tension: 0.1 },
+                            { label: 'Presence', data: chartData.map(d => d.presence), borderColor: 'rgb(255, 159, 64)', tension: 0.1 },
+                            { label: 'Connection', data: chartData.map(d => d.connection), borderColor: 'rgb(153, 102, 255)', tension: 0.1 }
+                        ]
+                    },
+                    options: { scales: { y: { beginAtZero: true, max: 10 } } }
+                };
+            }
+            centerednessChart = new Chart(ctx, config);
+        }
+
+        async function loadPulseData() {
+            if (!currentUserId) return;
+            const todayDocSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
+            if (todayDocSnap.exists() && todayDocSnap.data().status === 'completed') {
+                compositeScoreDisplay.textContent = todayDocSnap.data().compositeScore;
+            } else {
+                compositeScoreDisplay.textContent = '--';
+            }
+            
+            let chartData = [];
+            for (let i = currentChartTimeframe - 1; i >= 0; i--) {
+                const date = new Date(); date.setDate(date.getDate() - i); const dateStr = getFormattedDate(date);
+                const docSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${dateStr}`));
+                if (docSnap.exists() && docSnap.data().status === 'completed') chartData.push({ dateStr, ...docSnap.data() });
+            }
+
+            if (chartData.length === 0) {
+                chartCanvas.classList.add('hidden');
+                chartNoData.classList.remove('hidden');
+            } else {
+                chartCanvas.classList.remove('hidden');
+                chartNoData.add('hidden');
+                createOrUpdateChart(chartData, currentChartTimeframe === 1 ? 'bar' : 'line');
+            }
+            
+            if (todayDocSnap.exists()) {
+                pulseActionBtn.textContent = "Today's Pulse Submitted"; pulseActionBtn.disabled = true;
+            } else {
+                pulseActionBtn.textContent = "Do Today's Pulse Check"; pulseActionBtn.disabled = false;
+            }
+        }
         
         async function loadReflectionData(date) {
             const dateStr = getFormattedDate(date);
@@ -140,7 +209,7 @@
             } else {
                 reflectionEntry.value = '';
                 if (dateStr === getFormattedDate(new Date())) {
-                    await generateAIPrompt(date); // Changed to await
+                    await generateAIPrompt(date);
                 } else {
                     aiPromptDisplay.textContent = "No reflection recorded for this day.";
                     reflectionEntry.classList.add('hidden');
@@ -154,13 +223,12 @@
             let pastReflections = [];
 
             try {
-                // THIS IS THE CODE BLOCK THAT WAS FAILING
                 const reflectionsRef = collection(db, "reflections");
                 const q = query(reflectionsRef, where("userId", "==", currentUserId), orderBy("submittedAt", "desc"), limit(5));
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
             } catch (error) {
-                console.error("Could not fetch past reflections, likely because the index is building. Proceeding without them.", error);
+                console.error("Could not fetch past reflections. Proceeding without them.", error);
             }
             
             const systemPrompt = "You are a thoughtful journal assistant. Your goal is to provide a concise (under 180 characters) and insightful CBT-based prompt. If the user has past reflections, base your prompt on their recent themes. Otherwise, provide a general CBT prompt about thoughts, feelings, or behaviors.";
@@ -189,16 +257,79 @@
             }
         }
 
-        function calculateStreak(habitLogs) { /* ... same as before ... */ }
-        async function loadHabitsData() { /* ... same as before ... */ }
+        function calculateStreak(habitLogs) {
+            let streak = 0;
+            const todayStr = getFormattedDate(new Date());
+            const completedDates = new Set(habitLogs.filter(log => log.completed).map(log => log.date));
+            if (completedDates.size === 0) return 0;
+            let currentDate = new Date();
+            if (!completedDates.has(todayStr)) {
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+            while (completedDates.has(getFormattedDate(currentDate))) {
+                streak++;
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+            return streak;
+        }
 
-        habitList.addEventListener('change', async (e) => {
-            if (e.target.type === 'checkbox') {
-                const habitId = e.target.dataset.habitId;
-                const isChecked = e.target.checked;
+        async function loadHabitsData() {
+            if (!currentUserId) return;
+            habitList.innerHTML = ''; 
+
+            const habitsRef = collection(db, "habits");
+            const q = query(habitsRef, where("userId", "==", currentUserId), orderBy("createdAt", "asc"));
+            const habitsSnapshot = await getDocs(q);
+            
+            const allLogsRef = collection(db, "habitLogs");
+            const allLogsQuery = query(allLogsRef, where("userId", "==", currentUserId));
+            const allLogsSnapshot = await getDocs(allLogsQuery);
+            const allLogsByHabit = {};
+            allLogsSnapshot.docs.forEach(d => {
+                const log = d.data();
+                if (!allLogsByHabit[log.habitId]) allLogsByHabit[log.habitId] = [];
+                allLogsByHabit[log.habitId].push(log);
+            });
+
+            const todayStr = getFormattedDate(new Date());
+
+            habitsSnapshot.forEach(doc => {
+                const habit = doc.data();
+                const habitId = doc.id;
+                const habitLogs = allLogsByHabit[habitId] || [];
+                const streak = calculateStreak(habitLogs);
+                const isCompletedToday = habitLogs.some(log => log.date === todayStr && log.completed);
+
+                const li = document.createElement('li');
+                li.className = 'habit-item';
+                li.innerHTML = `
+                    <div class="habit-info">
+                        <input type="checkbox" id="habit-${habitId}" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''}>
+                        <label for="habit-${habitId}">${habit.name}</label>
+                    </div>
+                    <div class="habit-actions">
+                        <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
+                        <button class="remove-habit-btn" data-habit-id="${habitId}">&times;</button>
+                    </div>
+                `;
+                habitList.appendChild(li);
+            });
+        }
+
+        habitList.addEventListener('click', async (e) => {
+            const target = e.target;
+            if (target.type === 'checkbox') {
+                const habitId = target.dataset.habitId;
+                const isChecked = target.checked;
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
-                await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId: habitId, date: getFormattedDate(new Date()), completed: isChecked });
+                await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked });
                 await loadHabitsData();
+            } else if (target.classList.contains('remove-habit-btn')) {
+                const habitId = target.dataset.habitId;
+                if (confirm('Are you sure you want to delete this habit? This cannot be undone.')) {
+                    await deleteDoc(doc(db, "habits", habitId));
+                    await loadHabitsData();
+                }
             }
         });
 
@@ -223,12 +354,13 @@
              }
         });
         
-        // --- ALL OTHER EVENT LISTENERS AND FUNCTIONS REMAIN THE SAME ---
         function showModal(modalEl) { modalEl.classList.remove('hidden'); }
         function hideModal(modalEl) { modalEl.classList.add('hidden'); }
+        
         pulseActionBtn.addEventListener('click', () => showModal(pulseModal));
         addHabitBtn.addEventListener('click', () => showModal(addHabitModal));
         cancelHabitBtn.addEventListener('click', () => hideModal(addHabitModal));
+
         addHabitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const habitName = document.getElementById('habit-name').value;
@@ -239,6 +371,7 @@
             hideModal(addHabitModal);
             await loadHabitsData();
         });
+
         document.getElementById('pulse-form').addEventListener('submit', async (event) => { 
             event.preventDefault(); 
             if (!currentUserId) return; 
@@ -251,14 +384,18 @@
             await loadPulseData(); 
             hideModal(pulseModal); 
         });
+
         document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(pulseModal); });
         document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); await loadPulseData(); hideModal(pulseModal); });
+        
         document.getElementById('toggle-form-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('signup-form').classList.toggle('hidden'); document.getElementById('login-form').classList.toggle('hidden'); e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login'; });
         document.getElementById('signup-form').addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, e.target['signup-email'].value, e.target['signup-password'].value).catch(error => alert(error.message)); });
         document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message)); });
         signoutBtn.addEventListener('click', () => signOut(auth));
+        
         prevDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() - 1); loadReflectionData(reflectionDate); });
         nextDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() + 1); loadReflectionData(reflectionDate); });
+        
         reflectionActionBtn.addEventListener('click', async () => {
             const isEditing = !reflectionEntry.disabled;
             if (isEditing) {
@@ -272,9 +409,11 @@
                 reflectionActionBtn.textContent = 'Save';
             }
         });
+        
         chartTodayBtn.addEventListener('click', () => { currentChartTimeframe = 1; updateChartControls(); });
         chart7dBtn.addEventListener('click', () => { currentChartTimeframe = 7; updateChartControls(); });
         chart30dBtn.addEventListener('click', () => { currentChartTimeframe = 30; updateChartControls(); });
+        
         function updateChartControls() {
             [chartTodayBtn, chart7dBtn, chart30dBtn].forEach(btn => btn.classList.remove('active'));
             if (currentChartTimeframe === 1) chartTodayBtn.classList.add('active');
@@ -282,6 +421,7 @@
             else if (currentChartTimeframe === 30) chart30dBtn.classList.add('active');
             loadPulseData();
         }
+        
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
     
     </script>
