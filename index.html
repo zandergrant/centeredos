@@ -96,16 +96,13 @@
         let reflectionDate = new Date();
         let currentChartTimeframe = 7; 
 
+        // Get all element references
         const authContainer = document.getElementById('auth-container');
         const appContent = document.getElementById('app-content');
         const signoutBtn = document.getElementById('signout-btn');
         const authStatus = document.getElementById('auth-status');
-        
-        // Modals
         const pulseModal = document.getElementById('pulse-modal');
         const addHabitModal = document.getElementById('add-habit-modal');
-
-        // Centeredness Tile
         const pulseActionBtn = document.getElementById('pulse-action-btn');
         const chartCanvas = document.getElementById('centeredness-chart');
         const chartNoData = document.getElementById('chart-no-data');
@@ -113,16 +110,12 @@
         const chart7dBtn = document.getElementById('chart-7d-btn');
         const chart30dBtn = document.getElementById('chart-30d-btn');
         const compositeScoreDisplay = document.getElementById('composite-score-display');
-        
-        // Reflection Tile
         const aiPromptDisplay = document.getElementById('ai-prompt-display');
         const reflectionEntry = document.getElementById('reflection-entry');
         const reflectionActionBtn = document.getElementById('reflection-action-btn');
         const prevDayBtn = document.getElementById('prev-day-btn');
         const nextDayBtn = document.getElementById('next-day-btn');
         const reflectionDateDisplay = document.getElementById('reflection-date-display');
-        
-        // Habit Tile
         const habitList = document.getElementById('habit-list');
         const addHabitBtn = document.getElementById('add-habit-btn');
         const addHabitForm = document.getElementById('add-habit-form');
@@ -130,36 +123,82 @@
 
         function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
-        function createOrUpdateChart(chartData, chartType) { /* ... same as before ... */ }
-        async function loadPulseData() { /* ... same as before ... */ }
-        async function loadReflectionData(date) { /* ... same as before ... */ }
-        async function generateAIPrompt(date) { /* ... same as before ... */ }
+        function createOrUpdateChart(chartData, chartType) { /* ... same as previous version ... */ }
+        async function loadPulseData() { /* ... same as previous version ... */ }
+        async function loadReflectionData(date) { /* ... same as previous version ... */ }
+        async function generateAIPrompt(date) { /* ... same as previous version ... */ }
         
+        // --- Habit Logic ---
+        function calculateStreak(habitLogs) {
+            let streak = 0;
+            const today = new Date();
+            const todayStr = getFormattedDate(today);
+
+            const completedDates = new Set();
+            habitLogs.forEach(log => {
+                if (log.completed) {
+                    completedDates.add(log.date);
+                }
+            });
+
+            if (completedDates.size === 0) return 0;
+            
+            let currentDate = new Date();
+            // If today isn't completed, start checking from yesterday
+            if (!completedDates.has(todayStr)) {
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+
+            while (true) {
+                const dateStr = getFormattedDate(currentDate);
+                if (completedDates.has(dateStr)) {
+                    streak++;
+                    currentDate.setDate(currentDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
         async function loadHabitsData() {
             if (!currentUserId) return;
-            habitList.innerHTML = ''; // Clear existing list
+            habitList.innerHTML = ''; 
 
             const habitsRef = collection(db, "habits");
             const q = query(habitsRef, where("userId", "==", currentUserId), orderBy("createdAt", "asc"));
-            const querySnapshot = await getDocs(q);
+            const habitsSnapshot = await getDocs(q);
             
-            const todayStr = getFormattedDate(new Date());
-            const habitLogsRef = collection(db, "habitLogs");
-            const logsQuery = query(habitLogsRef, where("userId", "==", currentUserId), where("date", "==", todayStr));
-            const logsSnapshot = await getDocs(logsQuery);
-            const completedHabits = new Set(logsSnapshot.docs.map(d => d.data().habitId));
+            // Get all logs for this user to calculate streaks efficiently
+            const allLogsRef = collection(db, "habitLogs");
+            const allLogsQuery = query(allLogsRef, where("userId", "==", currentUserId));
+            const allLogsSnapshot = await getDocs(allLogsQuery);
+            const allLogsByHabit = {};
+            allLogsSnapshot.docs.forEach(d => {
+                const log = d.data();
+                if (!allLogsByHabit[log.habitId]) {
+                    allLogsByHabit[log.habitId] = [];
+                }
+                allLogsByHabit[log.habitId].push(log);
+            });
 
-            querySnapshot.forEach(doc => {
+            const todayStr = getFormattedDate(new Date());
+
+            habitsSnapshot.forEach(doc => {
                 const habit = doc.data();
                 const habitId = doc.id;
-                
+                const habitLogs = allLogsByHabit[habitId] || [];
+                const streak = calculateStreak(habitLogs);
+                const isCompletedToday = habitLogs.some(log => log.date === todayStr && log.completed);
+
                 const li = document.createElement('li');
                 li.className = 'habit-item';
                 li.innerHTML = `
                     <label>
-                        <input type="checkbox" data-habit-id="${habitId}" ${completedHabits.has(habitId) ? 'checked' : ''}>
+                        <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''}>
                         <span>${habit.name}</span>
                     </label>
+                    <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
                 `;
                 habitList.appendChild(li);
             });
@@ -177,6 +216,7 @@
                     date: getFormattedDate(new Date()),
                     completed: isChecked
                 });
+                loadHabitsData(); // Recalculate streaks
             }
         });
 
@@ -188,11 +228,14 @@
                 loadPulseData(); 
                 loadReflectionData(reflectionDate);
                 loadHabitsData();
-                const isSnoozed = localStorage.getItem('snoozeUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozeUntil'), 10);
+                const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
                 getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
                     if (!docSnap.exists() && !isSnoozed) showModal(pulseModal);
                 });
-            } else { /* ... same as before ... */ }
+            } else { 
+                currentUserId = null; authStatus.textContent = 'Not connected';
+                authContainer.classList.remove('hidden'); appContent.classList.add('hidden'); signoutBtn.classList.add('hidden');
+             }
         });
         
         function showModal(modalEl) { modalEl.classList.remove('hidden'); }
@@ -212,7 +255,7 @@
                 userId: currentUserId,
                 name: habitName,
                 description: habitDesc,
-                cadence: { type: "daily" }, // Defaulting to daily for now
+                cadence: { type: "daily" },
                 createdAt: new Date().toISOString()
             });
 
@@ -221,9 +264,20 @@
             loadHabitsData();
         });
 
-        document.getElementById('pulse-form').addEventListener('submit', async (event) => { /* ... same as before, but call hideModal(pulseModal) ... */ });
-        document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozeUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(pulseModal); });
-        document.getElementById('skip-today-btn').addEventListener('click', async () => { /* ... same as before, but call hideModal(pulseModal) ... */ });
+        document.getElementById('pulse-form').addEventListener('submit', async (event) => { 
+            event.preventDefault(); 
+            if (!currentUserId) return; 
+            const steadiness = parseInt(event.target.steadiness.value, 10);
+            const presence = parseInt(event.target.presence.value, 10);
+            const connection = parseInt(event.target.connection.value, 10);
+            const compositeScore = Math.round((steadiness + presence + connection) / 3 * 10) / 10;
+            const docId = `${currentUserId}_${getFormattedDate(new Date())}`; 
+            await setDoc(doc(db, "pulseCheckins", docId), { steadiness, presence, connection, compositeScore, status: 'completed', submittedAt: new Date().toISOString() }); 
+            loadPulseData(); 
+            hideModal(pulseModal); 
+        });
+        document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozUntil', new Date().getTime() + (10 * 60 * 1000)); hideModal(pulseModal); });
+        document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); loadPulseData(); hideModal(pulseModal); });
         
         // --- Other event listeners remain the same ---
         document.getElementById('toggle-form-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('signup-form').classList.toggle('hidden'); document.getElementById('login-form').classList.toggle('hidden'); e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login'; });
@@ -232,13 +286,32 @@
         signoutBtn.addEventListener('click', () => signOut(auth));
         prevDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() - 1); loadReflectionData(reflectionDate); });
         nextDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() + 1); loadReflectionData(reflectionDate); });
-        reflectionActionBtn.addEventListener('click', async () => { /* ... same as before ... */ });
+        reflectionActionBtn.addEventListener('click', async () => {
+            const isEditing = !reflectionEntry.disabled;
+            if (isEditing) {
+                if (!currentUserId) return;
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(reflectionDate)}`), { entryText: reflectionEntry.value, updatedAt: new Date().toISOString() }, { merge: true });
+                reflectionEntry.disabled = true;
+                reflectionActionBtn.textContent = 'Edit';
+            } else {
+                reflectionEntry.disabled = false;
+                reflectionEntry.focus();
+                reflectionActionBtn.textContent = 'Save';
+            }
+        });
         chartTodayBtn.addEventListener('click', () => { currentChartTimeframe = 1; updateChartControls(); });
         chart7dBtn.addEventListener('click', () => { currentChartTimeframe = 7; updateChartControls(); });
         chart30dBtn.addEventListener('click', () => { currentChartTimeframe = 30; updateChartControls(); });
-        function updateChartControls() { /* ... same as before ... */ }
+        function updateChartControls() {
+            [chartTodayBtn, chart7dBtn, chart30dBtn].forEach(btn => btn.classList.remove('active'));
+            if (currentChartTimeframe === 1) chartTodayBtn.classList.add('active');
+            else if (currentChartTimeframe === 7) chart7dBtn.classList.add('active');
+            else if (currentChartTimeframe === 30) chart30dBtn.classList.add('active');
+            loadPulseData();
+        }
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
     
     </script>
 </body>
 </html>
+
