@@ -128,7 +128,6 @@
         async function loadReflectionData(date) { /* ... same as previous version ... */ }
         async function generateAIPrompt(date) { /* ... same as previous version ... */ }
         
-        // --- Habit Logic ---
         function calculateStreak(habitLogs) {
             let streak = 0;
             const today = new Date();
@@ -144,7 +143,6 @@
             if (completedDates.size === 0) return 0;
             
             let currentDate = new Date();
-            // If today isn't completed, start checking from yesterday
             if (!completedDates.has(todayStr)) {
                 currentDate.setDate(currentDate.getDate() - 1);
             }
@@ -169,7 +167,6 @@
             const q = query(habitsRef, where("userId", "==", currentUserId), orderBy("createdAt", "asc"));
             const habitsSnapshot = await getDocs(q);
             
-            // Get all logs for this user to calculate streaks efficiently
             const allLogsRef = collection(db, "habitLogs");
             const allLogsQuery = query(allLogsRef, where("userId", "==", currentUserId));
             const allLogsSnapshot = await getDocs(allLogsQuery);
@@ -216,22 +213,26 @@
                     date: getFormattedDate(new Date()),
                     completed: isChecked
                 });
-                loadHabitsData(); // Recalculate streaks
+                loadHabitsData();
             }
         });
 
-        onAuthStateChanged(auth, user => {
+        onAuthStateChanged(auth, async (user) => { // Made this function async
             if (user) {
                 currentUserId = user.uid; authStatus.textContent = `Connected (${user.email})`;
                 authContainer.classList.add('hidden'); appContent.classList.remove('hidden'); signoutBtn.classList.remove('hidden');
                 reflectionDate = new Date();
-                loadPulseData(); 
-                loadReflectionData(reflectionDate);
-                loadHabitsData();
+                
+                // Load data sequentially to prevent race conditions
+                await loadPulseData(); 
+                await loadReflectionData(reflectionDate);
+                await loadHabitsData();
+
                 const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
-                getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
-                    if (!docSnap.exists() && !isSnoozed) showModal(pulseModal);
-                });
+                const docSnap = await getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`));
+                if (!docSnap.exists() && !isSnoozed) {
+                    showModal(pulseModal);
+                }
             } else { 
                 currentUserId = null; authStatus.textContent = 'Not connected';
                 authContainer.classList.remove('hidden'); appContent.classList.add('hidden'); signoutBtn.classList.add('hidden');
