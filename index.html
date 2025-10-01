@@ -170,8 +170,10 @@
             nextDayBtn.disabled = dateStr === getFormattedDate(new Date());
 
             const docSnap = await getDoc(doc(db, "reflections", `${currentUserId}_${dateStr}`));
-            if (docSnap.exists()) {
-                aiPromptDisplay.textContent = docSnap.data().promptText || "Welcome! Write your reflection below.";
+            
+            // BUG FIX: Regenerate prompt if the document exists but the prompt text is missing.
+            if (docSnap.exists() && docSnap.data().promptText) {
+                aiPromptDisplay.textContent = docSnap.data().promptText;
                 reflectionEntry.value = docSnap.data().entryText || '';
                 reflectionEntry.classList.remove('hidden');
                 submitReflectionBtn.classList.remove('hidden');
@@ -207,16 +209,17 @@
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
                 const result = await response.json();
                 const newPrompt = result.candidates[0].content.parts[0].text;
 
                 aiPromptDisplay.textContent = newPrompt;
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() });
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } catch (error) {
                 console.error("AI Prompt generation failed:", error);
                 const fallbackPrompt = "What is one thought you've had today that you'd like to look at more closely?";
                 aiPromptDisplay.textContent = fallbackPrompt;
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() });
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } finally {
                 reflectionEntry.classList.remove('hidden'); 
                 submitReflectionBtn.classList.remove('hidden'); 
@@ -229,7 +232,9 @@
             if (user) {
                 currentUserId = user.uid; authStatus.textContent = `Connected (${user.email})`;
                 authContainer.classList.add('hidden'); appContent.classList.remove('hidden'); signoutBtn.classList.remove('hidden');
-                loadPulseData(); loadReflectionData(reflectionDate);
+                reflectionDate = new Date(); // Reset date on login
+                loadPulseData(); 
+                loadReflectionData(reflectionDate);
                 const isSnoozed = localStorage.getItem('snoozeUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozeUntil'), 10);
                 getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
                     if (!docSnap.exists() && !isSnoozed) showModal();
@@ -264,7 +269,7 @@
         }
         chartTodayBtn.addEventListener('click', () => { currentChartTimeframe = 1; updateChartControls(); });
         chart7dBtn.addEventListener('click', () => { currentChartTimeframe = 7; updateChartControls(); });
-        chart30dBtn.addEventListener('click', () => { currentChartTimeframe = 30; updateChartControls(); });
+        chart30dBtn.addEventListener('click', => { currentChartTimeframe = 30; updateChartControls(); });
 
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
     </script>
