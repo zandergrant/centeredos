@@ -156,20 +156,60 @@ button.btn-primary {
 .habit-item:last-child {
     border-bottom: none;
 }
-.habit-item label {
+.habit-info {
     display: flex;
     align-items: center;
     gap: 15px;
     font-size: 1.1em;
 }
-.habit-item input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
+.habit-info label {
+    cursor: pointer;
+}
+.habit-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 .habit-streak {
-    font-size: 1.1em;
+    font-size: 0.9em;
+    color: #606770;
+}
+.remove-habit-btn {
+    background: none;
+    border: none;
+    color: #8a8d91;
+    font-size: 1.5em;
     font-weight: bold;
-    color: #ff9800; /* An orange color for the streak */
+    cursor: pointer;
+    padding: 0 5px;
+}
+.remove-habit-btn:hover {
+    color: #1c1e21;
+}
+
+/* Custom Checkbox Style */
+.habit-info input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.habit-info input[type="checkbox"]:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+.habit-info input[type="checkbox"]:checked::after {
+    content: '✔';
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 
