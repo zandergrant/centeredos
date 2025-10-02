@@ -247,7 +247,7 @@
             console.log('Sending to AI:', userQuery);
 
             try {
-                const apiKey = "";
+                const apiKey = "gen-lang-client-0613103041";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 const payload = { 
                     contents: [{ parts: [{ text: userQuery }] }], 
