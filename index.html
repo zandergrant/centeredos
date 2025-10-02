@@ -240,10 +240,7 @@
                 console.error("Could not fetch past reflections. Proceeding without them.", error);
             }
             
-            // THIS IS THE SYSTEM PROMPT YOU CAN EDIT
             const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
-            
-            // This is the user query that gets sent
             let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
             if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
             
@@ -254,13 +251,20 @@
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                // MORE DETAILED ERROR LOGGING
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.error("AI Prompt API Error:", JSON.stringify(errorBody, null, 2));
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
                 const result = await response.json();
                 const newPrompt = result.candidates[0].content.parts[0].text;
                 aiPromptDisplay.textContent = newPrompt;
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } catch (error) {
-                console.error("AI Prompt generation failed:", error);
+                console.error("AI Prompt generation failed:", error.message);
                 const fallbackPrompt = "What is one thought you've had today that you'd like to look at more closely?";
                 aiPromptDisplay.textContent = fallbackPrompt;
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
