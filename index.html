@@ -240,8 +240,11 @@
                 console.error("Could not fetch past reflections. Proceeding without them.", error);
             }
             
-            const systemPrompt = "You are a thoughtful journal assistant. Your goal is to provide a concise (under 180 characters) and insightful CBT-based prompt. Use a creative or metaphorical angle. If the user has past reflections, base your prompt on their recent themes. Otherwise, provide a general CBT prompt about thoughts, feelings, or behaviors.";
-            let userQuery = "Please generate a new journal prompt for me.";
+            // THIS IS THE SYSTEM PROMPT YOU CAN EDIT
+            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
+            
+            // This is the user query that gets sent
+            let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
             if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
             
             console.log('Sending to AI:', userQuery);
@@ -344,34 +347,30 @@
                 const isChecked = target.checked;
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
                 
-                // 1. Update Firestore
                 await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked });
 
-                // 2. Fetch logs for ONLY this habit to recalculate streak
                 const habitLogsRef = collection(db, "habitLogs");
                 const q = query(habitLogsRef, where("userId", "==", currentUserId), where("habitId", "==", habitId));
                 const logsSnapshot = await getDocs(q);
                 const habitLogs = logsSnapshot.docs.map(d => d.data());
                 
-                // 3. Recalculate streak
                 const newStreak = calculateStreak(habitLogs);
 
-                // 4. Find the specific span and update it without reloading the whole list
                 const streakSpan = target.closest('.habit-item').querySelector('.habit-streak');
                 if (streakSpan) {
                     streakSpan.textContent = newStreak > 0 ? `🔥 ${newStreak}` : '';
                 }
 
             } else if (target.classList.contains('remove-habit-btn')) {
-                const habitId = target.dataset.habitId;
                 if (confirm('Are you sure you want to delete this habit and all its history?')) {
+                    const habitId = target.dataset.habitId;
                     await deleteDoc(doc(db, "habits", habitId));
                     const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId), where("userId", "==", currentUserId));
                     const logsSnapshot = await getDocs(logsQuery);
                     logsSnapshot.forEach(logDoc => {
                         deleteDoc(doc(db, "habitLogs", logDoc.id));
                     });
-                    await loadHabitsData(); // Full reload is okay here since an item is removed
+                    await loadHabitsData();
                 }
             }
         });
@@ -479,4 +478,3 @@
     </script>
 </body>
 </html>
-
