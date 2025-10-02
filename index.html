@@ -240,7 +240,7 @@
                 console.error("Could not fetch past reflections. Proceeding without them.", error);
             }
             
-            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
+            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions like 'What are you grateful for?'. Do not repeat prompts you have given before.";
             let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
             if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
             
@@ -249,10 +249,15 @@
             try {
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } };
+                const payload = { 
+                    contents: [{ parts: [{ text: userQuery }] }], 
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        temperature: 0.7 
+                    }
+                };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
-                // MORE DETAILED ERROR LOGGING
                 if (!response.ok) {
                     const errorBody = await response.json();
                     console.error("AI Prompt API Error:", JSON.stringify(errorBody, null, 2));
@@ -482,3 +487,4 @@
     </script>
 </body>
 </html>
+
