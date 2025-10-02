@@ -141,7 +141,7 @@
                     },
                     options: { scales: { y: { beginAtZero: true, max: 10 } }, plugins: { legend: { display: false } } }
                 };
-            } else { // THIS IS WHERE THE MISSING BRACE WAS
+            } else {
                 config = {
                     type: 'line',
                     data: {
@@ -231,30 +231,38 @@
             aiPromptDisplay.textContent = "Thinking of a good prompt for you...";
             let pastReflections = [];
 
+            const fallbackPrompts = [
+                "What is one thought you've had today that you'd like to look at more closely?",
+                "If you could describe your day in a single color, what would it be and why?",
+                "What was a small, unexpected moment of joy you experienced today?",
+                "Describe a situation today where you felt most like your true self.",
+                "If a feeling you had today was a landscape, what would it look like?"
+            ];
+
+            const setFallback = async () => {
+                const randomPrompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
+                aiPromptDisplay.textContent = randomPrompt;
+                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: randomPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
+            };
+
             try {
                 const reflectionsRef = collection(db, "reflections");
                 const q = query(reflectionsRef, where("userId", "==", currentUserId), orderBy("submittedAt", "desc"), limit(5));
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
-            } catch (error) {
-                console.error("Could not fetch past reflections. Proceeding without them.", error);
-            }
             
-            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
-            let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
-            if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
-            
-            console.log('Sending to AI:', userQuery);
+                const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
+                let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
+                if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
+                
+                console.log('Sending to AI:', userQuery);
 
-            try {
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 const payload = { 
                     contents: [{ parts: [{ text: userQuery }] }], 
                     systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: {
-                        temperature: 0.7 
-                    }
+                    generationConfig: { temperature: 0.8 }
                 };
                 const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 
@@ -270,9 +278,7 @@
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
             } catch (error) {
                 console.error("AI Prompt generation failed:", error.message);
-                const fallbackPrompt = "What is one thought you've had today that you'd like to look at more closely?";
-                aiPromptDisplay.textContent = fallbackPrompt;
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: fallbackPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
+                await setFallback();
             } finally {
                 reflectionEntry.classList.remove('hidden'); 
                 reflectionActionBtn.classList.remove('hidden'); 
