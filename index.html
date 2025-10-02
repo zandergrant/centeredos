@@ -141,7 +141,7 @@
                     },
                     options: { scales: { y: { beginAtZero: true, max: 10 } }, plugins: { legend: { display: false } } }
                 };
-            } else { 
+            } else { // THIS IS WHERE THE MISSING BRACE WAS
                 config = {
                     type: 'line',
                     data: {
@@ -240,7 +240,7 @@
                 console.error("Could not fetch past reflections. Proceeding without them.", error);
             }
             
-            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions like 'What are you grateful for?'. Do not repeat prompts you have given before.";
+            const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.";
             let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
             if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
             
@@ -357,30 +357,17 @@
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
                 
                 await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked });
-
-                const habitLogsRef = collection(db, "habitLogs");
-                const q = query(habitLogsRef, where("userId", "==", currentUserId), where("habitId", "==", habitId));
-                const logsSnapshot = await getDocs(q);
-                const habitLogs = logsSnapshot.docs.map(d => d.data());
-                
-                const newStreak = calculateStreak(habitLogs);
-
-                const streakSpan = target.closest('.habit-item').querySelector('.habit-streak');
-                if (streakSpan) {
-                    streakSpan.textContent = newStreak > 0 ? `🔥 ${newStreak}` : '';
-                }
-
+                await loadHabitsData();
             } else if (target.classList.contains('remove-habit-btn')) {
-                if (confirm('Are you sure you want to delete this habit and all its history?')) {
-                    const habitId = target.dataset.habitId;
-                    await deleteDoc(doc(db, "habits", habitId));
-                    const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId), where("userId", "==", currentUserId));
-                    const logsSnapshot = await getDocs(logsQuery);
-                    logsSnapshot.forEach(logDoc => {
-                        deleteDoc(doc(db, "habitLogs", logDoc.id));
-                    });
-                    await loadHabitsData();
-                }
+                const habitId = target.dataset.habitId;
+                // Removed the confirm() dialog which does not work in this environment
+                await deleteDoc(doc(db, "habits", habitId));
+                const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId), where("userId", "==", currentUserId));
+                const logsSnapshot = await getDocs(logsQuery);
+                logsSnapshot.forEach(logDoc => {
+                    deleteDoc(doc(db, "habitLogs", logDoc.id));
+                });
+                await loadHabitsData();
             }
         });
 
