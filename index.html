@@ -26,7 +26,7 @@
 </head>
 <body>
     <header>
-        <h1>CenteredOS</h1>
+        <h1 id="greeting-header">CenteredOS</h1>
         <div class="header-controls">
             <p>Status: <span id="auth-status">Connecting...</span></p>
             <button id="signout-btn" class="hidden">Sign Out</button>
@@ -34,7 +34,7 @@
     </header>
 
     <div id="auth-container">
-        <form id="login-form"><h3>Login</h3><input type="email" id="login-email" placeholder="Email" required><br><br><input type="password" id="login-password" placeholder="Password" required><br><br><button type="submit">Login</button></form><form id="signup-form" class="hidden"><h3>Sign Up</h3><input type="email" id="signup-email" placeholder="Email" required><br><br><input type="password" id="signup-password" placeholder="Password" required><br><br><button type="submit">Sign Up</button></form><p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
+        <form id="login-form"><h3>Login</h3><input type="email" id="login-email" placeholder="Email" required><br><br><input type="password" id="login-password" placeholder="Password" required><br><br><button type="submit">Login</button></form><form id="signup-form" class="hidden"><h3>Sign Up</h3><input type="text" id="signup-firstname" placeholder="First Name" required><br><br><input type="text" id="signup-lastname" placeholder="Last Name" required><br><br><input type="email" id="signup-email" placeholder="Email" required><br><br><input type="password" id="signup-password" placeholder="Password" required><br><br><button type="submit">Sign Up</button></form><p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
     </div>
 
     <main id="app-content" class="hidden">
@@ -164,6 +164,23 @@
         const readTitle = document.getElementById('read-title');
         const readDescription = document.getElementById('read-description');
         const readListContent = document.getElementById('read-list-content');
+        
+        let userProfile = null;
+
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) return "Good morning";
+            if (hour < 18) return "Good afternoon";
+            return "Good evening";
+        }
+
+        function updateGreeting() {
+            if (userProfile && userProfile.firstName) {
+                document.getElementById('greeting-header').textContent = `${getGreeting()}, ${userProfile.firstName}`;
+            } else {
+                document.getElementById('greeting-header').textContent = "CenteredOS";
+            }
+        }
 
         function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
 
@@ -437,7 +454,9 @@
                 } else if (!isChecked && streakSpan.textContent === '🔥 1') {
                     streakSpan.textContent = '';
                 }
-                // For more complex streaks, keep existing display until next full reload
+                
+                // Check if all habits are completed
+                checkAllHabitsCompleted();
                 
             } else if (target.classList.contains('skip-habit-btn')) {
                 const habitId = target.dataset.habitId;
@@ -461,6 +480,8 @@
                     target.textContent = 'Unskip';
                 }
                 
+                checkAllHabitsCompleted();
+                
             } else if (target.classList.contains('remove-habit-btn')) {
                 const habitId = target.dataset.habitId;
                 if (!confirm('Are you sure you want to delete this habit?')) return;
@@ -475,9 +496,46 @@
             }
         });
 
+        function checkAllHabitsCompleted() {
+            const allHabits = Array.from(document.querySelectorAll('.habit-item:not(.habit-skipped)'));
+            const allCheckboxes = allHabits.map(item => item.querySelector('input[type="checkbox"]'));
+            
+            if (allCheckboxes.length > 0 && allCheckboxes.every(cb => cb.checked)) {
+                showConfetti();
+            }
+        }
+
+        function showConfetti() {
+            const confettiContainer = document.createElement('div');
+            confettiContainer.className = 'confetti-container';
+            document.body.appendChild(confettiContainer);
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.textContent = '🎉';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                confettiContainer.appendChild(confetti);
+            }
+            
+            setTimeout(() => {
+                confettiContainer.remove();
+            }, 4000);
+        }
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUserId = user.uid;
+                
+                // Load user profile
+                const profileDoc = await getDoc(doc(db, "userProfiles", currentUserId));
+                if (profileDoc.exists()) {
+                    userProfile = profileDoc.data();
+                }
+                updateGreeting();
+                
                 authStatus.textContent = `Connected (${user.email})`;
                 authContainer.classList.add('hidden');
                 appContent.classList.remove('hidden');
@@ -500,6 +558,7 @@
 
             } else { 
                 currentUserId = null;
+                userProfile = null;
                 authStatus.textContent = 'Not connected';
                 authContainer.classList.remove('hidden');
                 appContent.classList.add('hidden');
@@ -518,9 +577,9 @@
         addHabitForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const habitName = document.getElementById('habit-name').value;
-            const habitDesc = document.getElementById('habit-desc').value;
+            const habitWhy = document.getElementById('habit-desc').value;
             if (!currentUserId || !habitName) return;
-            await addDoc(collection(db, "habits"), { userId: currentUserId, name: habitName, description: habitDesc, cadence: { type: "daily" }, createdAt: new Date().toISOString() });
+            await addDoc(collection(db, "habits"), { userId: currentUserId, name: habitName, why: habitWhy, description: habitWhy, cadence: { type: "daily" }, createdAt: new Date().toISOString() });
             addHabitForm.reset();
             hideModal(addHabitModal);
             await loadHabitsData();
@@ -543,7 +602,21 @@
         document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); await loadPulseData(); hideModal(pulseModal); });
         
         document.getElementById('toggle-form-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('signup-form').classList.toggle('hidden'); document.getElementById('login-form').classList.toggle('hidden'); e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login'; });
-        document.getElementById('signup-form').addEventListener('submit', e => { e.preventDefault(); createUserWithEmailAndPassword(auth, e.target['signup-email'].value, e.target['signup-password'].value).catch(error => alert(error.message)); });
+        document.getElementById('signup-form').addEventListener('submit', async e => { 
+            e.preventDefault(); 
+            const email = e.target['signup-email'].value;
+            const password = e.target['signup-password'].value;
+            const firstName = e.target['signup-firstname'].value;
+            const lastName = e.target['signup-lastname'].value;
+            
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const userId = userCredential.user.uid;
+                await setDoc(doc(db, "userProfiles", userId), { firstName, lastName, email, createdAt: new Date().toISOString() });
+            } catch (error) {
+                alert(error.message);
+            }
+        });
         document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message)); });
         signoutBtn.addEventListener('click', () => signOut(auth));
         
@@ -587,6 +660,127 @@
         }
 
         document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
+    
+        // Daily Read Functions
+        async function loadDailyRead() {
+            try {
+                if (!currentUserId) return;
+                const todayStr = getFormattedDate(new Date());
+                const docSnap = await getDoc(doc(db, "dailyReads", `${currentUserId}_${todayStr}`));
+                
+                if (docSnap.exists() && docSnap.data().title) {
+                    const readData = docSnap.data();
+                    readTitle.textContent = readData.title;
+                    readDescription.textContent = readData.description;
+                    
+                    if (readData.read) {
+                        markReadBtn.textContent = "Already Read ✓";
+                        markReadBtn.disabled = true;
+                    } else {
+                        markReadBtn.textContent = "Mark as Read";
+                        markReadBtn.disabled = false;
+                    }
+                } else {
+                    await generateDailyRead();
+                }
+            } catch (error) {
+                console.error("Error loading daily read:", error);
+            }
+        }
+
+        async function generateDailyRead() {
+            readTitle.textContent = "Generating today's reading...";
+            readDescription.textContent = "";
+            markReadBtn.disabled = true;
+            
+            try {
+                const systemPrompt = `You are a wellness content curator. Generate a short, engaging title and description for a CBT, mindfulness, or wellness reading resource. The title should be 5-10 words and thought-provoking. The description should be 2-3 sentences that explain the concept clearly and why it matters for mental wellbeing. Focus on practical, evidence-based topics like cognitive reframing, mindfulness techniques, emotional regulation, or self-compassion. Keep it fresh and varied.`;
+                const userQuery = `Generate a new wellness reading for ${new Date().toDateString()}. Make it unique and compelling.`;
+                
+                const apiKey = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { temperature: 0.9 }
+                };
+                
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                
+                const result = await response.json();
+                const content = result.candidates[0].content.parts[0].text;
+                
+                // Parse title and description from AI response
+                const lines = content.split('\n').filter(line => line.trim());
+                const title = lines[0].replace(/^(Title:|##?\s*)/, '').trim();
+                const description = lines.slice(1).join(' ').replace(/^(Description:|##?\s*)/, '').trim();
+                
+                readTitle.textContent = title;
+                readDescription.textContent = description;
+                
+                const todayStr = getFormattedDate(new Date());
+                await setDoc(doc(db, "dailyReads", `${currentUserId}_${todayStr}`), {
+                    userId: currentUserId,
+                    title,
+                    description,
+                    date: todayStr,
+                    read: false,
+                    createdAt: new Date().toISOString()
+                });
+                
+                markReadBtn.textContent = "Mark as Read";
+                markReadBtn.disabled = false;
+            } catch (error) {
+                console.error("Error generating daily read:", error);
+                readTitle.textContent = "Could not generate reading";
+                readDescription.textContent = "Please try refreshing.";
+            }
+        }
+
+        async function loadReadList() {
+            try {
+                readListContent.innerHTML = '<p>Loading...</p>';
+                const readsRef = collection(db, "dailyReads");
+                const q = query(readsRef, where("userId", "==", currentUserId), where("read", "==", true), orderBy("createdAt", "desc"), limit(20));
+                const snapshot = await getDocs(q);
+                
+                if (snapshot.empty) {
+                    readListContent.innerHTML = '<p style="color: var(--oura-text-secondary); font-style: italic;">No reads yet. Mark readings as complete to build your list!</p>';
+                    return;
+                }
+                
+                let html = '<ul class="read-list">';
+                snapshot.forEach(doc => {
+                    const read = doc.data();
+                    const date = new Date(read.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    html += `<li><strong>${read.title}</strong><br><span class="read-date">${date}</span></li>`;
+                });
+                html += '</ul>';
+                readListContent.innerHTML = html;
+            } catch (error) {
+                console.error("Error loading read list:", error);
+                readListContent.innerHTML = '<p>Error loading read list.</p>';
+            }
+        }
+
+        markReadBtn.addEventListener('click', async () => {
+            try {
+                const todayStr = getFormattedDate(new Date());
+                await setDoc(doc(db, "dailyReads", `${currentUserId}_${todayStr}`), { read: true, readAt: new Date().toISOString() }, { merge: true });
+                markReadBtn.textContent = "Already Read ✓";
+                markReadBtn.disabled = true;
+            } catch (error) {
+                console.error("Error marking as read:", error);
+            }
+        });
+
+        refreshReadBtn.addEventListener('click', async () => {
+            if (confirm('Generate a new reading for today? This will replace the current one.')) {
+                await generateDailyRead();
+            }
+        });
     
     </script>
 </body>
