@@ -409,6 +409,7 @@ button.btn-primary:hover {
     color: var(--oura-text-secondary);
     line-height: 1.6;
     margin: 0;
+    white-space: pre-wrap; /* Allows paragraphs in the AI-generated essay */
 }
 
 .read-list-modal .modal-content {
@@ -564,7 +565,7 @@ button.btn-primary:hover {
     100% { transform: rotate(360deg); }
 }
 
-/* --- Confetti Styles (Added) --- */
+/* --- Confetti Styles --- */
 .confetti-container {
     position: fixed;
     top: 0;
