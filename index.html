@@ -6,6 +6,23 @@
     <title>Centered - Your Daily Pulse</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -50,6 +67,7 @@
                 </div>
                 <div class="tile-content">
                     <p id="ai-prompt-display">Loading your daily prompt...</p>
+                    <span id="prompt-loading-spinner" class="loading-spinner hidden"></span>
                     <textarea id="reflection-entry" placeholder="Write your reflection here..." disabled></textarea>
                 </div>
                 <div class="tile-footer">
@@ -112,6 +130,7 @@
         const chart30dBtn = document.getElementById('chart-30d-btn');
         const compositeScoreDisplay = document.getElementById('composite-score-display');
         const aiPromptDisplay = document.getElementById('ai-prompt-display');
+        const promptLoadingSpinner = document.getElementById('prompt-loading-spinner');
         const reflectionEntry = document.getElementById('reflection-entry');
         const reflectionActionBtn = document.getElementById('reflection-action-btn');
         const regeneratePromptBtn = document.getElementById('regenerate-prompt-btn');
@@ -234,6 +253,7 @@
         
         async function generateAIPrompt(date) {
             aiPromptDisplay.textContent = "Thinking of a good prompt for you...";
+            promptLoadingSpinner.classList.remove('hidden');
             regeneratePromptBtn.disabled = true;
             let success = false;
             let pastReflections = [];
@@ -268,11 +288,13 @@
                 const result = await response.json();
                 const newPrompt = result.candidates[0].content.parts[0].text;
                 aiPromptDisplay.textContent = newPrompt;
+                promptLoadingSpinner.classList.add('hidden');
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
                 success = true;
             } catch (error) {
                 console.error("AI Prompt generation failed:", error.message);
                 aiPromptDisplay.textContent = "Could not generate an AI prompt at this time. Please try again later.";
+                promptLoadingSpinner.classList.add('hidden');
                 success = false;
             } finally {
                 regeneratePromptBtn.disabled = false;
