@@ -22,7 +22,7 @@
 
     <main id="app-content" class="hidden">
         <div id="dashboard">
-            <!-- Tiles for Centeredness, Reflection, and Habits -->
+            <!-- All tile HTML remains the same -->
             <div class="tile full-width">
                 <div class="tile-header">
                     <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
@@ -71,7 +71,7 @@
         </div>
     </main>
     
-    <!-- Modals -->
+    <!-- All Modal HTML remains the same -->
     <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pulse-modal-title"><div class="modal-content"><h2 id="pulse-modal-title">Daily Pulse Check-in</h2><form id="pulse-form"><div class="slider-group"><label for="steadiness">How steady do you feel right now?</label><input type="range" id="steadiness" name="steadiness" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="presence">How present were you today?</label><input type="range" id="presence" name="presence" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="connection">How connected vs. reactive did you feel?</label><input type="range" id="connection" name="connection" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="button-group"><button type="submit" class="btn-primary">Submit</button><button type="button" id="skip-now-btn">Skip for now</button><button type="button" id="skip-today-btn">Skip for today</button></div></form></div></div>
     <div id="add-habit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="habit-modal-title"><div class="modal-content"><h2 id="habit-modal-title">Create a New Habit</h2><form id="add-habit-form"><div class="form-group"><label for="habit-name">Habit Name</label><input type="text" id="habit-name" required></div><div class="form-group"><label for="habit-desc">Description (Optional)</label><textarea id="habit-desc"></textarea></div><div class="button-group"><button type="submit" class="btn-primary">Save Habit</button><button type="button" id="cancel-habit-btn">Cancel</button></div></form></div></div>
 
@@ -80,7 +80,7 @@
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration from your project settings
+        // ============== YOUR REAL, CORRECT FIREBASE CONFIG ==============
         const firebaseConfig = {
             apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk",
             authDomain: "centeredos.firebaseapp.com",
@@ -90,6 +90,7 @@
             appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408",
             measurementId: "G-7S84S0NHQV"
         };
+        // ===============================================================
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
