@@ -237,21 +237,8 @@
         
         async function generateAIPrompt(date) {
             aiPromptDisplay.textContent = "Thinking of a good prompt for you...";
+            let success = false;
             let pastReflections = [];
-
-            const fallbackPrompts = [
-                "What is one thought you've had today that you'd like to look at more closely?",
-                "If you could describe your day in a single color, what would it be and why?",
-                "What was a small, unexpected moment of joy you experienced today?",
-                "Describe a situation today where you felt most like your true self.",
-                "If a feeling you had today was a landscape, what would it look like?"
-            ];
-
-            const setFallback = async () => {
-                const randomPrompt = fallbackPrompts[Math.floor(Math.random() * fallbackPrompts.length)];
-                aiPromptDisplay.textContent = randomPrompt;
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: randomPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
-            };
 
             try {
                 const reflectionsRef = collection(db, "reflections");
@@ -284,13 +271,20 @@
                 const newPrompt = result.candidates[0].content.parts[0].text;
                 aiPromptDisplay.textContent = newPrompt;
                 await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
+                success = true;
             } catch (error) {
                 console.error("AI Prompt generation failed:", error.message);
-                await setFallback();
+                aiPromptDisplay.textContent = "Could not generate an AI prompt at this time. Please try again later.";
+                success = false;
             } finally {
-                reflectionEntry.classList.remove('hidden'); 
-                reflectionActionBtn.classList.remove('hidden'); 
-                reflectionActionBtn.textContent = 'Write';
+                if (success) {
+                    reflectionEntry.classList.remove('hidden'); 
+                    reflectionActionBtn.classList.remove('hidden'); 
+                    reflectionActionBtn.textContent = 'Write';
+                } else {
+                    reflectionEntry.classList.add('hidden');
+                    reflectionActionBtn.classList.add('hidden');
+                }
             }
         }
 
