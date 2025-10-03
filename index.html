@@ -449,19 +449,20 @@
                     li.className = 'habit-item';
                     if (isSkippedToday) li.classList.add('habit-skipped');
                     
-                    li.innerHTML = `
-                        <label>
-                            <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''} ${isSkippedToday ? 'disabled' : ''}>
-                            <span class="checkmark"></span>
-                            <span>${habit.name}</span>
-                            <small class="habit-why">${habit.why || ''}</small>
-                        </label>
-                        <div class="habit-controls">
-                            <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
-                            <button class="skip-habit-btn" data-habit-id="${habitId}">${isSkippedToday ? 'Unskip' : 'Skip'}</button>
-                            <button class="remove-habit-btn" data-habit-id="${habitId}">&times;</button>
-                        </div>
-                    `;
+li.innerHTML = `
+    <label>
+        <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''} ${isSkippedToday ? 'disabled' : ''}>
+        <div class="habit-text">
+            <span class="habit-name">${habit.name}</span>
+            <span class="habit-description">${habit.why || ''}</span>
+        </div>
+    </label>
+    <div class="habit-controls">
+        <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
+        <button class="skip-habit-btn" data-habit-id="${habitId}">${isSkippedToday ? 'Unskip' : 'Skip'}</button>
+        <button class="remove-habit-btn" data-habit-id="${habitId}">&times;</button>
+    </div>
+`;
                     habitList.appendChild(li);
                 });
             } catch (error) {
@@ -723,7 +724,11 @@
             markReadBtn.disabled = true;
             
             try {
-                const systemPrompt = `You are a wellness content curator. Generate a short, engaging title and description for a CBT, mindfulness, or wellness reading resource. The title should be 5-10 words and thought-provoking. The description should be 2-3 sentences that explain the concept clearly and why it matters for mental wellbeing. Focus on practical, evidence-based topics like cognitive reframing, mindfulness techniques, emotional regulation, or self-compassion. Keep it fresh and varied. Format your response with 'Title:' on the first line and 'Description:' on the second.`;
+                const systemPrompt = `You are a thoughtful and empathetic wellness writer. Your task is to write a short, insightful essay (around 200-250 words) on a practical wellness topic. The essay should have a clear title and be broken into 2-3 short paragraphs. The tone should be calming, encouraging, and actionable, providing the reader with a gentle perspective to carry through their day. Topics can include mindfulness, cognitive reframing, self-compassion, emotional regulation, or dealing with uncertainty.
+
+Format the entire response STRICTLY as follows:
+- The first line must be 'Title:' followed by the essay title.
+- The rest of the response must be the essay content, with empty lines between paragraphs.`;
                 const userQuery = `Generate a new wellness reading for ${new Date().toDateString()}. Make it unique and compelling.`;
                 
                 const apiKey = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
@@ -743,7 +748,7 @@
                 
                 const lines = content.split('\n').filter(line => line.trim());
                 const title = lines[0].replace(/^(Title:|##?\s*)/, '').trim();
-                const description = lines.slice(1).join(' ').replace(/^(Description:|##?\s*)/, '').trim();
+                const description = lines.slice(1).join('\n').replace(/^(Description:|##?\s*)/, '').trim();
                 
                 readTitle.textContent = title;
                 readDescription.textContent = description;
