@@ -28,12 +28,6 @@ header, #auth-container, main {
     margin: 0 auto 20px auto;
 }
 
-@media (max-width: 1200px) {
-    header, #auth-container, main {
-        width: 90%;
-    }
-}
-
 header {
     background-color: var(--oura-secondary);
     padding: 20px;
@@ -310,6 +304,7 @@ button.btn-primary:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    padding-top: 2px; /* Aligns text better with the checkbox */
 }
 
 .habit-name {
@@ -352,6 +347,55 @@ button.btn-primary:hover {
 .skip-habit-btn:hover {
     background-color: var(--oura-border);
     color: var(--oura-text);
+}
+
+.remove-habit-btn {
+    background: none;
+    border: none;
+    color: var(--oura-text-secondary);
+    font-size: 1.5em;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.3s ease;
+}
+
+.remove-habit-btn:hover {
+    color: var(--oura-warning);
+}
+
+/* Custom Checkbox Style */
+.habit-item input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--oura-border);
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--oura-secondary);
+    transition: all 0.3s ease;
+    flex-shrink: 0; /* Prevents checkbox from shrinking */
+}
+
+.habit-item input[type="checkbox"]:hover {
+    border-color: var(--oura-accent);
+}
+
+.habit-item input[type="checkbox"]:checked {
+    background-color: var(--oura-success);
+    border-color: var(--oura-success);
+}
+
+.habit-item input[type="checkbox"]:checked::after {
+    content: '✔';
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 /* Daily Read Tile */
@@ -401,60 +445,14 @@ button.btn-primary:hover {
     color: var(--oura-text-secondary);
 }
 
-.remove-habit-btn {
-    background: none;
-    border: none;
-    color: var(--oura-text-secondary);
-    font-size: 1.5em;
-    font-weight: bold;
-    cursor: pointer;
-    padding: 0 8px;
-    transition: color 0.3s ease;
-}
-
-.remove-habit-btn:hover {
-    color: var(--oura-warning);
-}
-
-/* Custom Checkbox Style */
-.habit-item input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    border: 2px solid var(--oura-border);
-    border-radius: 6px;
-    cursor: pointer;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--oura-secondary);
-    transition: all 0.3s ease;
-}
-
-.habit-item input[type="checkbox"]:hover {
-    border-color: var(--oura-accent);
-}
-
-.habit-item input[type="checkbox"]:checked {
-    background-color: var(--oura-success);
-    border-color: var(--oura-success);
-}
-
-.habit-item input[type="checkbox"]:checked::after {
-    content: '✔';
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-}
-
 .tile-footer { 
-    margin-top: 20px; 
+    margin-top: auto; /* Pushes footer to the bottom of the tile */
+    padding-top: 20px; 
     text-align: right;
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+    border-top: 1px solid var(--oura-border);
 }
 
 /* Modal Styles */
@@ -499,6 +497,8 @@ button.btn-primary:hover {
 }
 
 .slider-group input[type="range"] { 
+    -webkit-appearance: none;
+    appearance: none;
     width: 100%;
     height: 6px;
     background: var(--oura-secondary);
@@ -507,6 +507,7 @@ button.btn-primary:hover {
 }
 
 .slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
     appearance: none;
     width: 20px;
     height: 20px;
@@ -563,10 +564,45 @@ button.btn-primary:hover {
     100% { transform: rotate(360deg); }
 }
 
+/* --- Confetti Styles (Added) --- */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 9999;
+}
+.confetti {
+    position: absolute;
+    top: -20px;
+    font-size: 24px;
+    animation: fall linear forwards;
+    transform-origin: center center;
+}
+@keyframes fall {
+    to {
+        transform: translateY(100vh) rotate(360deg);
+    }
+}
+
+
 /* Responsive Design */
+@media (max-width: 1200px) {
+    header, #auth-container, main {
+        width: 90%;
+    }
+}
+
 @media (max-width: 768px) {
     body {
         padding: 10px;
+    }
+
+    header, #auth-container, main {
+        width: calc(100% - 20px);
     }
     
     .tile {
@@ -578,8 +614,23 @@ button.btn-primary:hover {
         align-items: flex-start;
         gap: 12px;
     }
+
+    .tile-header h3 {
+        width: 100%;
+    }
     
     .chart-controls {
         width: 100%;
+    }
+
+    .habit-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .habit-controls {
+        width: 100%;
+        justify-content: flex-start;
     }
 }
