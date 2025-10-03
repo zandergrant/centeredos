@@ -22,6 +22,43 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* --- Style Fixes from Request --- */
+        #dashboard {
+            max-width: 900px; /* Adjust as needed */
+            width: 66.66%;    /* 2/3 of the page width */
+            margin: 20px auto; /* Centers the dashboard on the page */
+        }
+        .habit-why {
+            display: block;
+            font-size: 0.8em;
+            color: #888;
+            margin-left: 30px; /* Aligns with habit name */
+        }
+
+        /* --- Confetti Styles --- */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 9999;
+        }
+        .confetti {
+            position: absolute;
+            top: -20px;
+            font-size: 24px;
+            animation: fall linear forwards;
+            transform-origin: center center;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
@@ -129,7 +166,8 @@
         let currentUserId = null;
         let centerednessChart = null;
         let reflectionDate = new Date();
-        let currentChartTimeframe = 1; 
+        let currentChartTimeframe = 1;
+        let userProfile = null;
 
         const authContainer = document.getElementById('auth-container');
         const appContent = document.getElementById('app-content');
@@ -164,8 +202,6 @@
         const readTitle = document.getElementById('read-title');
         const readDescription = document.getElementById('read-description');
         const readListContent = document.getElementById('read-list-content');
-        
-        let userProfile = null;
 
         function getGreeting() {
             const hour = new Date().getHours();
@@ -187,7 +223,6 @@
         function createOrUpdateChart(chartData, chartType) {
             const ctx = chartCanvas.getContext('2d');
             if (centerednessChart) centerednessChart.destroy();
-
             let config;
             if (chartType === 'bar') {
                 const data = chartData[0] || { steadiness: 0, presence: 0, connection: 0 };
@@ -305,7 +340,6 @@
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
             
-                // Get habit "whys" for context
                 const habitsRef = collection(db, "habits");
                 const habitsQuery = query(habitsRef, where("userId", "==", currentUserId));
                 const habitsSnapshot = await getDocs(habitsQuery);
@@ -420,7 +454,7 @@
                             <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''} ${isSkippedToday ? 'disabled' : ''}>
                             <span class="checkmark"></span>
                             <span>${habit.name}</span>
-<small class="habit-why">${habit.why || ''}</small>
+                            <small class="habit-why">${habit.why || ''}</small>
                         </label>
                         <div class="habit-controls">
                             <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
@@ -442,21 +476,17 @@
                 const isChecked = target.checked;
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
                 
-                // Update database in background
                 setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked, skipped: false });
                 
-                // Update streak display immediately (optimistic update)
                 const habitItem = target.closest('.habit-item');
                 const streakSpan = habitItem.querySelector('.habit-streak');
                 
-                // Simple streak calculation without database fetch
                 if (isChecked && streakSpan.textContent === '') {
                     streakSpan.textContent = '🔥 1';
                 } else if (!isChecked && streakSpan.textContent === '🔥 1') {
                     streakSpan.textContent = '';
                 }
                 
-                // Check if all habits are completed
                 checkAllHabitsCompleted();
                 
             } else if (target.classList.contains('skip-habit-btn')) {
@@ -466,13 +496,11 @@
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
                 
                 if (isCurrentlySkipped) {
-                    // Unskip
                     deleteDoc(doc(db, "habitLogs", logId));
                     habitItem.classList.remove('habit-skipped');
                     habitItem.querySelector('input[type="checkbox"]').disabled = false;
                     target.textContent = 'Skip';
                 } else {
-                    // Skip
                     setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: false, skipped: true });
                     habitItem.classList.add('habit-skipped');
                     const checkbox = habitItem.querySelector('input[type="checkbox"]');
@@ -499,9 +527,10 @@
 
         function checkAllHabitsCompleted() {
             const allHabits = Array.from(document.querySelectorAll('.habit-item:not(.habit-skipped)'));
+            if (allHabits.length === 0) return;
             const allCheckboxes = allHabits.map(item => item.querySelector('input[type="checkbox"]'));
             
-            if (allCheckboxes.length > 0 && allCheckboxes.every(cb => cb.checked)) {
+            if (allCheckboxes.every(cb => cb.checked)) {
                 showConfetti();
             }
         }
@@ -530,7 +559,6 @@
             if (user) {
                 currentUserId = user.uid;
                 
-                // Load user profile
                 const profileDoc = await getDoc(doc(db, "userProfiles", currentUserId));
                 if (profileDoc.exists()) {
                     userProfile = profileDoc.data();
@@ -549,7 +577,6 @@
                     loadHabitsData(),
                     loadDailyRead()
                 ]).then(() => {
-                    // Check if pulse should be shown
                     getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
                         if (!docSnap.exists() || docSnap.data().status !== 'completed') {
                             showModal(pulseModal);
@@ -560,11 +587,12 @@
             } else { 
                 currentUserId = null;
                 userProfile = null;
+                updateGreeting();
                 authStatus.textContent = 'Not connected';
                 authContainer.classList.remove('hidden');
                 appContent.classList.add('hidden');
                 signoutBtn.classList.add('hidden');
-             }
+            }
         });
         
         function showModal(modalEl) { modalEl.classList.remove('hidden'); }
@@ -695,7 +723,7 @@
             markReadBtn.disabled = true;
             
             try {
-                const systemPrompt = `You are a wellness content curator. Generate a short, engaging title and description for a CBT, mindfulness, or wellness reading resource. The title should be 5-10 words and thought-provoking. The description should be 2-3 sentences that explain the concept clearly and why it matters for mental wellbeing. Focus on practical, evidence-based topics like cognitive reframing, mindfulness techniques, emotional regulation, or self-compassion. Keep it fresh and varied.`;
+                const systemPrompt = `You are a wellness content curator. Generate a short, engaging title and description for a CBT, mindfulness, or wellness reading resource. The title should be 5-10 words and thought-provoking. The description should be 2-3 sentences that explain the concept clearly and why it matters for mental wellbeing. Focus on practical, evidence-based topics like cognitive reframing, mindfulness techniques, emotional regulation, or self-compassion. Keep it fresh and varied. Format your response with 'Title:' on the first line and 'Description:' on the second.`;
                 const userQuery = `Generate a new wellness reading for ${new Date().toDateString()}. Make it unique and compelling.`;
                 
                 const apiKey = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
@@ -713,7 +741,6 @@
                 const result = await response.json();
                 const content = result.candidates[0].content.parts[0].text;
                 
-                // Parse title and description from AI response
                 const lines = content.split('\n').filter(line => line.trim());
                 const title = lines[0].replace(/^(Title:|##?\s*)/, '').trim();
                 const description = lines.slice(1).join(' ').replace(/^(Description:|##?\s*)/, '').trim();
@@ -748,7 +775,7 @@
                 const snapshot = await getDocs(q);
                 
                 if (snapshot.empty) {
-                    readListContent.innerHTML = '<p style="color: var(--oura-text-secondary); font-style: italic;">No reads yet. Mark readings as complete to build your list!</p>';
+                    readListContent.innerHTML = '<p>No reads yet. Mark readings as complete to build your list!</p>';
                     return;
                 }
                 
@@ -762,7 +789,7 @@
                 readListContent.innerHTML = html;
             } catch (error) {
                 console.error("Error loading read list:", error);
-                readListContent.innerHTML = '<p>Error loading read list.</p>';
+                readListContent.innerHTML = '<p>Error loading read list. You may need to create a Firestore Index. See browser console for a link.</p>';
             }
         }
 
