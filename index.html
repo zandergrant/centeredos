@@ -22,7 +22,7 @@
 
     <main id="app-content" class="hidden">
         <div id="dashboard">
-            <!-- Tile 1: Centeredness Graph -->
+            <!-- Tiles for Centeredness, Reflection, and Habits -->
             <div class="tile full-width">
                 <div class="tile-header">
                     <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
@@ -40,7 +40,6 @@
                     <button id="pulse-action-btn" class="btn-primary">Do Today's Pulse Check</button>
                 </div>
             </div>
-            <!-- Tile 2: Daily Reflection -->
             <div class="tile full-width" id="reflection-tile">
                 <div class="tile-header">
                     <h3>Daily Reflection</h3>
@@ -58,7 +57,6 @@
                     <button id="reflection-action-btn">Edit</button>
                 </div>
             </div>
-            <!-- Tile 3: Habit Tracker -->
             <div class="tile full-width" id="habits-tile">
                 <div class="tile-header">
                     <h3>Today's Habits</h3>
@@ -82,7 +80,16 @@
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk", authDomain: "centeredos.firebaseapp.com", projectId: "centeredos", storageBucket: "centeredos.firebasestorage.app", messagingSenderId: "129785779353", appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408", measurementId: "G-7S84S0NHQV" };
+        // Your web app's Firebase configuration from your project settings
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk",
+            authDomain: "centeredos.firebaseapp.com",
+            projectId: "centeredos",
+            storageBucket: "centeredos.firebasestorage.app",
+            messagingSenderId: "129785779353",
+            appId: "1:129785779353:web:f0c24b16f5e83e6f5c9408",
+            measurementId: "G-7S84S0NHQV"
+        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -251,9 +258,7 @@
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
             
-                // THIS IS THE CORRECTED SYSTEM PROMPT
-                const systemPrompt = `You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before. Start with 'hello, I hope you are well.'`;
-                
+                const systemPrompt = `You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.`;
                 let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
                 if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
                 
@@ -368,7 +373,6 @@
                 await loadHabitsData();
             } else if (target.classList.contains('remove-habit-btn')) {
                 const habitId = target.dataset.habitId;
-                // Removed the confirm() dialog which does not work in this environment
                 await deleteDoc(doc(db, "habits", habitId));
                 const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId), where("userId", "==", currentUserId));
                 const logsSnapshot = await getDocs(logsQuery);
