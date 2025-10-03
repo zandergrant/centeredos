@@ -251,7 +251,9 @@
                 const querySnapshot = await getDocs(q);
                 querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
             
-                const systemPrompt = "You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before. Start with "hello, I hope you are well.";
+                // THIS IS THE CORRECTED SYSTEM PROMPT
+                const systemPrompt = `You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before. Start with 'hello, I hope you are well.'`;
+                
                 let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
                 if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
                 
