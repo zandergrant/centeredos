@@ -420,6 +420,7 @@
                             <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''} ${isSkippedToday ? 'disabled' : ''}>
                             <span class="checkmark"></span>
                             <span>${habit.name}</span>
+<small class="habit-why">${habit.why || ''}</small>
                         </label>
                         <div class="habit-controls">
                             <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
