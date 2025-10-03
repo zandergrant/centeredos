@@ -26,7 +26,7 @@
 </head>
 <body>
     <header>
-        <h1>Welcome</h1>
+        <h1>CenteredOS</h1>
         <div class="header-controls">
             <p>Status: <span id="auth-status">Connecting...</span></p>
             <button id="signout-btn" class="hidden">Sign Out</button>
@@ -43,8 +43,8 @@
                 <div class="tile-header">
                     <h3>Centeredness <span id="composite-score-display" class="composite-score">--</span></h3>
                     <div class="chart-controls">
-                        <button id="chart-today-btn">Today</button>
-                        <button id="chart-7d-btn" class="active">7D</button>
+                        <button id="chart-today-btn" class="active">Today</button>
+                        <button id="chart-7d-btn">7D</button>
                         <button id="chart-30d-btn">30D</button>
                     </div>
                 </div>
@@ -71,8 +71,8 @@
                     <textarea id="reflection-entry" placeholder="Write your reflection here..." disabled></textarea>
                 </div>
                 <div class="tile-footer">
-                    <button id="reflection-action-btn">Edit</button>
                     <button id="regenerate-prompt-btn" style="margin-left: 10px;">🔄 New Prompt</button>
+                    <button id="reflection-action-btn">Edit</button>
                 </div>
             </div>
             <div class="tile full-width" id="habits-tile">
@@ -114,7 +114,7 @@
         let currentUserId = null;
         let centerednessChart = null;
         let reflectionDate = new Date();
-        let currentChartTimeframe = 7; 
+        let currentChartTimeframe = 1; 
 
         const authContainer = document.getElementById('auth-container');
         const appContent = document.getElementById('app-content');
