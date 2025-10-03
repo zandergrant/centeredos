@@ -333,8 +333,7 @@
         async function loadHabitsData() {
             try {
                 if (!currentUserId) return;
-                habitList.innerHTML = ''; 
-
+                
                 const habitsRef = collection(db, "habits");
                 const q = query(habitsRef, where("userId", "==", currentUserId), orderBy("createdAt", "asc"));
                 const habitsSnapshot = await getDocs(q);
@@ -350,24 +349,30 @@
                 });
 
                 const todayStr = getFormattedDate(new Date());
+                habitList.innerHTML = '';
 
                 habitsSnapshot.forEach(doc => {
                     const habit = doc.data();
                     const habitId = doc.id;
                     const habitLogs = allLogsByHabit[habitId] || [];
                     const streak = calculateStreak(habitLogs);
-                    const isCompletedToday = habitLogs.some(log => log.date === todayStr && log.completed);
+                    const todayLog = habitLogs.find(log => log.date === todayStr);
+                    const isCompletedToday = todayLog && todayLog.completed;
+                    const isSkippedToday = todayLog && todayLog.skipped;
 
                     const li = document.createElement('li');
                     li.className = 'habit-item';
+                    if (isSkippedToday) li.classList.add('habit-skipped');
+                    
                     li.innerHTML = `
                         <label>
-                            <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''}>
+                            <input type="checkbox" data-habit-id="${habitId}" ${isCompletedToday ? 'checked' : ''} ${isSkippedToday ? 'disabled' : ''}>
                             <span class="checkmark"></span>
                             <span>${habit.name}</span>
                         </label>
                         <div class="habit-controls">
                             <span class="habit-streak">${streak > 0 ? `🔥 ${streak}` : ''}</span>
+                            <button class="skip-habit-btn" data-habit-id="${habitId}">${isSkippedToday ? 'Unskip' : 'Skip'}</button>
                             <button class="remove-habit-btn" data-habit-id="${habitId}">&times;</button>
                         </div>
                     `;
@@ -385,10 +390,47 @@
                 const isChecked = target.checked;
                 const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
                 
-                await setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked });
-                await loadHabitsData();
+                // Update database in background
+                setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: isChecked, skipped: false });
+                
+                // Update streak display immediately (optimistic update)
+                const habitItem = target.closest('.habit-item');
+                const streakSpan = habitItem.querySelector('.habit-streak');
+                
+                // Simple streak calculation without database fetch
+                if (isChecked && streakSpan.textContent === '') {
+                    streakSpan.textContent = '🔥 1';
+                } else if (!isChecked && streakSpan.textContent === '🔥 1') {
+                    streakSpan.textContent = '';
+                }
+                // For more complex streaks, keep existing display until next full reload
+                
+            } else if (target.classList.contains('skip-habit-btn')) {
+                const habitId = target.dataset.habitId;
+                const habitItem = target.closest('.habit-item');
+                const isCurrentlySkipped = habitItem.classList.contains('habit-skipped');
+                const logId = `${currentUserId}_${habitId}_${getFormattedDate(new Date())}`;
+                
+                if (isCurrentlySkipped) {
+                    // Unskip
+                    deleteDoc(doc(db, "habitLogs", logId));
+                    habitItem.classList.remove('habit-skipped');
+                    habitItem.querySelector('input[type="checkbox"]').disabled = false;
+                    target.textContent = 'Skip';
+                } else {
+                    // Skip
+                    setDoc(doc(db, "habitLogs", logId), { userId: currentUserId, habitId, date: getFormattedDate(new Date()), completed: false, skipped: true });
+                    habitItem.classList.add('habit-skipped');
+                    const checkbox = habitItem.querySelector('input[type="checkbox"]');
+                    checkbox.disabled = true;
+                    checkbox.checked = false;
+                    target.textContent = 'Unskip';
+                }
+                
             } else if (target.classList.contains('remove-habit-btn')) {
                 const habitId = target.dataset.habitId;
+                if (!confirm('Are you sure you want to delete this habit?')) return;
+                
                 await deleteDoc(doc(db, "habits", habitId));
                 const logsQuery = query(collection(db, "habitLogs"), where("habitId", "==", habitId), where("userId", "==", currentUserId));
                 const logsSnapshot = await getDocs(logsQuery);
@@ -413,9 +455,9 @@
                     loadReflectionData(reflectionDate),
                     loadHabitsData()
                 ]).then(() => {
-                    const isSnoozed = localStorage.getItem('snoozUntil') && new Date().getTime() < parseInt(localStorage.getItem('snoozUntil'), 10);
+                    // Check if pulse should be shown
                     getDoc(doc(db, "pulseCheckins", `${currentUserId}_${getFormattedDate(new Date())}`)).then(docSnap => {
-                        if (!docSnap.exists() && !isSnoozed) {
+                        if (!docSnap.exists() || docSnap.data().status !== 'completed') {
                             showModal(pulseModal);
                         }
                     });
