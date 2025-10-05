@@ -18,7 +18,21 @@
     </header>
 
     <div id="auth-container">
-        <form id="login-form"><h3>Login</h3><input type="email" id="login-email" placeholder="Email" required><br><br><input type="password" id="login-password" placeholder="Password" required><br><br><button type="submit">Login</button></form><form id="signup-form" class="hidden"><h3>Sign Up</h3><input type="text" id="signup-firstname" placeholder="First Name" required><br><br><input type="text" id="signup-lastname" placeholder="Last Name" required><br><br><input type="email" id="signup-email" placeholder="Email" required><br><br><input type="password" id="signup-password" placeholder="Password" required><br><br><button type="submit">Sign Up</button></form><p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
+        <form id="login-form">
+            <h3>Login</h3>
+            <input type="email" id="login-email" placeholder="Email" required><br><br>
+            <input type="password" id="login-password" placeholder="Password" required><br><br>
+            <button type="submit">Login</button>
+        </form>
+        <form id="signup-form" class="hidden">
+            <h3>Sign Up</h3>
+            <input type="text" id="signup-firstname" placeholder="First Name" required><br><br>
+            <input type="text" id="signup-lastname" placeholder="Last Name" required><br><br>
+            <input type="email" id="signup-email" placeholder="Email" required><br><br>
+            <input type="password" id="signup-password" placeholder="Password" required><br><br>
+            <button type="submit">Sign Up</button>
+        </form>
+        <p><a href="#" id="toggle-form-link">Need an account? Sign Up</a></p>
     </div>
 
     <main id="app-content" class="hidden">
@@ -92,17 +106,71 @@
     </main>
     
     <!-- Modals -->
-    <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pulse-modal-title"><div class="modal-content"><h2 id="pulse-modal-title">Daily Pulse Check-in</h2><form id="pulse-form"><div class="slider-group"><label for="steadiness">How steady do you feel right now?</label><input type="range" id="steadiness" name="steadiness" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="presence">How present were you today?</label><input type="range" id="presence" name="presence" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="slider-group"><label for="connection">How connected vs. reactive did you feel?</label><input type="range" id="connection" name="connection" min="0" max="10" value="5"><span class="slider-value">5</span></div><div class="button-group"><button type="submit" class="btn-primary">Submit</button><button type="button" id="skip-now-btn">Skip for now</button><button type="button" id="skip-today-btn">Skip for today</button></div></form></div></div>
-    <div id="add-habit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="habit-modal-title"><div class="modal-content"><h2 id="habit-modal-title">Create a New Habit</h2><form id="add-habit-form"><div class="form-group"><label for="habit-name">Habit Name</label><input type="text" id="habit-name" required></div><div class="form-group"><label for="habit-desc">The Why</label><textarea id="habit-desc" placeholder="Why is this habit important to you?"></textarea></div><div class="button-group"><button type="submit" class="btn-primary">Save Habit</button><button type="button" id="cancel-habit-btn">Cancel</button></div></form></div></div>
-    <div id="read-list-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="read-list-modal-title"><div class="modal-content read-list-modal"><h2 id="read-list-modal-title">Your Read List</h2><div id="read-list-content"><p>Loading your read list...</p></div><div class="button-group"><button type="button" id="close-read-list-btn">Close</button></div></div></div>
+    <div id="pulse-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pulse-modal-title">
+        <div class="modal-content">
+            <h2 id="pulse-modal-title">Daily Pulse Check-in</h2>
+            <form id="pulse-form">
+                <div class="slider-group">
+                    <label for="steadiness">How steady do you feel right now?</label>
+                    <input type="range" id="steadiness" name="steadiness" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="slider-group">
+                    <label for="presence">How present were you today?</label>
+                    <input type="range" id="presence" name="presence" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="slider-group">
+                    <label for="connection">How connected vs. reactive did you feel?</label>
+                    <input type="range" id="connection" name="connection" min="0" max="10" value="5">
+                    <span class="slider-value">5</span>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Submit</button>
+                    <button type="button" id="skip-now-btn">Skip for now</button>
+                    <button type="button" id="skip-today-btn">Skip for today</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <!-- This is the complete, consolidated JavaScript for the CenteredOS app. -->
-    <!-- It includes all features and diagnostic logging for authentication. -->
+    <div id="add-habit-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="habit-modal-title">
+        <div class="modal-content">
+            <h2 id="habit-modal-title">Create a New Habit</h2>
+            <form id="add-habit-form">
+                <div class="form-group">
+                    <label for="habit-name">Habit Name</label>
+                    <input type="text" id="habit-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="habit-desc">The Why</label>
+                    <textarea id="habit-desc" placeholder="Why is this habit important to you?"></textarea>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Save Habit</button>
+                    <button type="button" id="cancel-habit-btn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="read-list-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="read-list-modal-title">
+        <div class="modal-content read-list-modal">
+            <h2 id="read-list-modal-title">Your Read List</h2>
+            <div id="read-list-content"><p>Loading your read list...</p></div>
+            <div class="button-group">
+                <button type="button" id="close-read-list-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Complete App Script -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
+        // ---------------- Firebase config (unchanged) ----------------
         const firebaseConfig = {
             apiKey: "AIzaSyAkF3nGHsrotcmT1Fen8Kujdlq5JIrqllk",
             authDomain: "centeredos.firebaseapp.com",
@@ -117,12 +185,29 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // ---------------- Vercel AI endpoints (no keys in browser) ----------------
+        const VERCEL_READS_API  = 'https://blog-sable-two-13.vercel.app/api/generate'; // your one-pager API
+        const VERCEL_PROMPT_API = 'https://blog-sable-two-13.vercel.app/api/prompt';   // new: reflection prompt API
+
+        // small helper
+        async function postJSON(url, payload) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error(`API error ${res.status}`);
+            return await res.json();
+        }
+
+        // ---------------- App state ----------------
         let currentUserId = null;
         let centerednessChart = null;
         let reflectionDate = new Date();
         let currentChartTimeframe = 1;
         let userProfile = null;
 
+        // ---------------- DOM ----------------
         const authContainer = document.getElementById('auth-container');
         const appContent = document.getElementById('app-content');
         const signoutBtn = document.getElementById('signout-btn');
@@ -157,6 +242,7 @@
         const readDescription = document.getElementById('read-description');
         const readListContent = document.getElementById('read-list-content');
 
+        // ---------------- Utilities ----------------
         function getGreeting() {
             const hour = new Date().getHours();
             if (hour < 12) return "Good morning";
@@ -172,8 +258,14 @@
             }
         }
 
-        function getFormattedDate(date) { const year = date.getFullYear(); const month = String(date.getMonth() + 1).padStart(2, '0'); const day = String(date.getDate()).padStart(2, '0'); return `${year}-${month}-${day}`; }
+        function getFormattedDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
 
+        // ---------------- Charts ----------------
         function createOrUpdateChart(chartData, chartType) {
             const ctx = chartCanvas.getContext('2d');
             if (centerednessChart) centerednessChart.destroy();
@@ -248,6 +340,7 @@
             }
         }
         
+        // ---------------- Reflection ----------------
         async function loadReflectionData(date) {
             try {
                 if (!currentUserId) return;
@@ -280,73 +373,60 @@
                 console.error("Error loading reflection data:", error);
             }
         }
-        
+
+        // NEW: server-routed prompt generation (no API keys in browser)
         async function generateAIPrompt(date) {
             aiPromptDisplay.textContent = "Thinking of a good prompt for you...";
             promptLoadingSpinner.classList.remove('hidden');
             regeneratePromptBtn.disabled = true;
-            let success = false;
-            let pastReflections = [];
-            let habitWhys = [];
 
             try {
-                const reflectionsRef = collection(db, "reflections");
+                // Gather last 5 reflections (text only) and habit whys (optional)
+                const pastReflections = [];
+                const reflectionsRef  = collection(db, "reflections");
                 const q = query(reflectionsRef, where("userId", "==", currentUserId), orderBy("submittedAt", "desc"), limit(5));
-                const querySnapshot = await getDocs(q);
-                querySnapshot.forEach(doc => { if (doc.data().entryText) pastReflections.push(doc.data().entryText); });
-            
+                const snap = await getDocs(q);
+                snap.forEach(d => { const v = d.data(); if (v.entryText) pastReflections.push(v.entryText); });
+
+                const habitWhys = [];
                 const habitsRef = collection(db, "habits");
-                const habitsQuery = query(habitsRef, where("userId", "==", currentUserId));
-                const habitsSnapshot = await getDocs(habitsQuery);
-                habitsSnapshot.forEach(doc => { 
-                    const habit = doc.data();
-                    if (habit.description) habitWhys.push(`${habit.name}: ${habit.description}`);
+                const hq = query(habitsRef, where("userId","==", currentUserId));
+                const hSnap = await getDocs(hq);
+                hSnap.forEach(d => { const v = d.data(); if (v?.description) habitWhys.push(`${v.name}: ${v.description}`); });
+
+                // Call Vercel — returns { prompt: string }
+                const dateStr = getFormattedDate(date);
+                const data = await postJSON(VERCEL_PROMPT_API, {
+                    date: dateStr,
+                    userId: currentUserId,
+                    context: { pastReflections, habitWhys }
                 });
 
-                const systemPrompt = `You are a highly creative journal assistant. Your main goal is to provide a unique, non-repeating, and insightful CBT-based prompt (under 180 characters). Use a creative, metaphorical, or unexpected angle. Even if the user has no past reflections, generate a completely fresh and varied prompt each day. Avoid generic questions. Do not repeat prompts you have given before.`;
-                let userQuery = `Please generate a new journal prompt for me. For context, today's date is ${new Date().toDateString()}.`;
-                if (pastReflections.length > 0) userQuery += "\n\nHere are my most recent reflections:\n- " + pastReflections.join('\n- ');
-                if (habitWhys.length > 0) userQuery += "\n\nFor additional context, here are my current habits and why they matter to me:\n- " + habitWhys.join('\n- ');
-                
-                const apiKey = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = { 
-                    contents: [{ parts: [{ text: userQuery }] }], 
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: { temperature: 0.8 }
-                };
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                
-                if (!response.ok) {
-                    const errorBody = await response.json();
-                    console.error("AI Prompt API Error:", JSON.stringify(errorBody, null, 2));
-                    throw new Error(`API Error: ${response.status}`);
-                }
+                const newPrompt = (data && data.prompt) ? String(data.prompt).trim() : '';
+                if (!newPrompt) throw new Error('Empty prompt');
 
-                const result = await response.json();
-                const newPrompt = result.candidates[0].content.parts[0].text;
                 aiPromptDisplay.textContent = newPrompt;
-                promptLoadingSpinner.classList.add('hidden');
-                await setDoc(doc(db, "reflections", `${currentUserId}_${getFormattedDate(date)}`), { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() }, { merge: true });
-                success = true;
+                await setDoc(
+                    doc(db, "reflections", `${currentUserId}_${dateStr}`),
+                    { promptText: newPrompt, entryText: '', userId: currentUserId, submittedAt: new Date(date).toISOString() },
+                    { merge: true }
+                );
+
+                reflectionEntry.classList.remove('hidden');
+                reflectionActionBtn.classList.remove('hidden');
+                reflectionActionBtn.textContent = 'Write';
             } catch (error) {
                 console.error("AI Prompt generation failed:", error);
-                aiPromptDisplay.textContent = "Could not generate an AI prompt at this time. Please try again later.";
-                promptLoadingSpinner.classList.add('hidden');
-                success = false;
+                aiPromptDisplay.textContent = "Could not generate an AI prompt right now. Try again shortly.";
+                reflectionEntry.classList.add('hidden');
+                reflectionActionBtn.classList.add('hidden');
             } finally {
+                promptLoadingSpinner.classList.add('hidden');
                 regeneratePromptBtn.disabled = false;
-                if (success) {
-                    reflectionEntry.classList.remove('hidden'); 
-                    reflectionActionBtn.classList.remove('hidden'); 
-                    reflectionActionBtn.textContent = 'Write';
-                } else {
-                    reflectionEntry.classList.add('hidden');
-                    reflectionActionBtn.classList.add('hidden');
-                }
             }
         }
-
+        
+        // ---------------- Habits ----------------
         function calculateStreak(habitLogs) {
             let streak = 0;
             const completedDates = new Set();
@@ -389,9 +469,9 @@
                 const todayStr = getFormattedDate(new Date());
                 habitList.innerHTML = '';
 
-                habitsSnapshot.forEach(doc => {
-                    const habit = doc.data();
-                    const habitId = doc.id;
+                habitsSnapshot.forEach(docu => {
+                    const habit = docu.data();
+                    const habitId = docu.id;
                     const habitLogs = allLogsByHabit[habitId] || [];
                     const streak = calculateStreak(habitLogs);
                     const todayLog = habitLogs.find(log => log.date === todayStr);
@@ -511,7 +591,7 @@
             }, 4000);
         }
 
-        // --- AUTHENTICATION WITH DIAGNOSTIC LOGGING ---
+        // ---------------- Auth & boot ----------------
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 console.log("✅ onAuthStateChanged: User is SIGNED IN.", user);
@@ -595,7 +675,13 @@
         document.getElementById('skip-now-btn').addEventListener('click', () => { localStorage.setItem('snoozedPulseUntil', new Date().getTime() + (60 * 60 * 1000)); hideModal(pulseModal); });
         document.getElementById('skip-today-btn').addEventListener('click', async () => { if (!currentUserId) return; const docId = `${currentUserId}_${getFormattedDate(new Date())}`; await setDoc(doc(db, "pulseCheckins", docId), { status: 'skipped', submittedAt: new Date().toISOString() }); await loadPulseData(); hideModal(pulseModal); });
         
-        document.getElementById('toggle-form-link').addEventListener('click', e => { e.preventDefault(); document.getElementById('signup-form').classList.toggle('hidden'); document.getElementById('login-form').classList.toggle('hidden'); e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login'; });
+        document.getElementById('toggle-form-link').addEventListener('click', e => {
+            e.preventDefault();
+            document.getElementById('signup-form').classList.toggle('hidden');
+            document.getElementById('login-form').classList.toggle('hidden');
+            e.target.textContent = document.getElementById('signup-form').classList.contains('hidden') ? 'Need an account? Sign Up' : 'Already have an account? Login';
+        });
+
         document.getElementById('signup-form').addEventListener('submit', async e => { 
             e.preventDefault(); 
             const email = e.target['signup-email'].value;
@@ -611,7 +697,12 @@
                 alert(error.message);
             }
         });
-        document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message)); });
+
+        document.getElementById('login-form').addEventListener('submit', e => {
+            e.preventDefault();
+            signInWithEmailAndPassword(auth, e.target['login-email'].value, e.target['login-password'].value).catch(error => alert(error.message));
+        });
+
         signoutBtn.addEventListener('click', () => signOut(auth));
         
         prevDayBtn.addEventListener('click', () => { reflectionDate.setDate(reflectionDate.getDate() - 1); loadReflectionData(reflectionDate); });
@@ -653,9 +744,13 @@
             loadPulseData();
         }
 
-        document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => { const valueSpan = slider.nextElementSibling; slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; }); valueSpan.textContent = slider.value; });
+        document.querySelectorAll('.slider-group input[type="range"]').forEach(slider => {
+            const valueSpan = slider.nextElementSibling;
+            slider.addEventListener('input', (e) => { valueSpan.textContent = e.target.value; });
+            valueSpan.textContent = slider.value;
+        });
     
-        // Daily Read Functions
+        // ---------------- Daily Read (server-routed, mini-article) ----------------
         async function loadDailyRead() {
             try {
                 if (!currentUserId) return;
@@ -682,49 +777,40 @@
             }
         }
 
+        // NEW: uses your Vercel one-pager and stitches sections into a blog-like post
         async function generateDailyRead() {
             readTitle.textContent = "Generating today's reading...";
             readDescription.textContent = "";
             markReadBtn.disabled = true;
             
             try {
-                const systemPrompt = `You are a thoughtful and empathetic wellness writer. Your task is to write a short, insightful essay (around 200-250 words) on a practical wellness topic. The essay should have a clear title and be broken into 2-3 short paragraphs. The tone should be calming, encouraging, and actionable, providing the reader with a gentle perspective to carry through their day. Topics can include mindfulness, cognitive reframing, self-compassion, emotional regulation, or dealing with uncertainty.
-
-Format the entire response STRICTLY as follows:
-- The first line must be 'Title:' followed by the essay title.
-- The rest of the response must be the essay content, with empty lines between paragraphs.`;
-                const userQuery = `Generate a new wellness reading for ${new Date().toDateString()}. Make it unique and compelling.`;
-                
-                const apiKey = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    systemInstruction: { parts: [{ text: systemPrompt }] },
-                    generationConfig: { temperature: 0.9 }
-                };
-                
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
-                
-                const result = await response.json();
-                const content = result.candidates[0].content.parts[0].text;
-                
-                const lines = content.split('\n');
-                const title = lines[0].replace(/^(Title:|##?\s*)/, '').trim();
-                const description = lines.slice(1).join('\n').trim();
-                
-                readTitle.textContent = title;
-                readDescription.textContent = description;
-                
                 const todayStr = getFormattedDate(new Date());
+
+                const data = await postJSON(VERCEL_READS_API, {
+                    date: todayStr,
+                    userId: currentUserId || 'anon'
+                });
+
+                const r = data && data.research ? data.research : {};
+                const title = (r.title || `Daily Brief — ${todayStr}`).trim();
+
+                const body = [
+                    r.introduction || '',
+                    r.keyFindings || '',
+                    r.conclusion  || ''
+                ].filter(Boolean).join('\n\n').trim();
+
+                readTitle.textContent = title;
+                readDescription.textContent = body || 'Pick one small action and do it today. Consistency beats intensity.';
+                
                 await setDoc(doc(db, "dailyReads", `${currentUserId}_${todayStr}`), {
                     userId: currentUserId,
                     title,
-                    description,
+                    description: readDescription.textContent,
                     date: todayStr,
                     read: false,
-                    createdAt: new Date().toISOString()
+                    createdAt: new Date().toISOString(),
+                    source: r.source || 'Cognitive psychology literature'
                 });
                 
                 markReadBtn.textContent = "Mark as Read";
@@ -753,8 +839,8 @@ Format the entire response STRICTLY as follows:
                 }
                 
                 let html = '<ul class="read-list">';
-                snapshot.forEach(doc => {
-                    const read = doc.data();
+                snapshot.forEach(docu => {
+                    const read = docu.data();
                     const date = new Date(read.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     html += `<li><strong>${read.title}</strong><br><span class="read-date">${date}</span></li>`;
                 });
@@ -783,7 +869,6 @@ Format the entire response STRICTLY as follows:
                 await generateDailyRead();
             }
         });
-    
     </script>
 </body>
 </html>
